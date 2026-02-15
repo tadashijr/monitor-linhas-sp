@@ -174,7 +174,7 @@ def webhook():
 /start - Esta mensagem
 /linha [número] - Status de uma linha
   Ex: `/linha 2`
-/todos - Status de TODAS as linhas
+/todas - Status de TODAS as linhas
 
 🤖 Notificações automáticas: 7h, 17h e 22h
 """
