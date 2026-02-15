@@ -5,6 +5,8 @@ from datetime import datetime
 import pytz
 from typing import Dict, List, Any, Optional
 import time
+from flask import Flask, request
+import threading
 
 # Configurações
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
@@ -14,8 +16,8 @@ ALERTAR_FALHA = os.environ.get('ALERTAR_FALHA', 'false').lower() == 'true'
 
 # Timeout para requisições
 TIMEOUT = 30
-# Arquivo para cache de status
-STATUS_CACHE_FILE = 'status_cache.json'
+# URL do site
+SITE_URL = "https://ccm.artesp.sp.gov.br/metroferroviario/status-linhas/"
 
 # Todas as linhas disponíveis para monitoramento
 TODAS_LINHAS = {
@@ -34,6 +36,8 @@ TODAS_LINHAS = {
     "15": {"nome": "Linha 15-Prata", "operadora": "Metrô"}
 }
 
+app = Flask(__name__)
+
 def get_sp_time() -> str:
     """Retorna a data/hora atual no fuso de São Paulo"""
     fuso_sp = pytz.timezone('America/Sao_Paulo')
@@ -41,10 +45,10 @@ def get_sp_time() -> str:
     agora_sp = agora_utc.astimezone(fuso_sp)
     return agora_sp.strftime("%d/%m/%Y %H:%M:%S")
 
-def send_telegram_message(message: str) -> bool:
+def send_telegram_message(chat_id: str, message: str) -> bool:
     """Envia mensagem para o Telegram"""
-    if not TELEGRAM_TOKEN or not CHAT_ID:
-        print("❌ Erro: TELEGRAM_TOKEN ou CHAT_ID não configurados")
+    if not TELEGRAM_TOKEN:
+        print("❌ Erro: TELEGRAM_TOKEN não configurado")
         return False
     
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -53,7 +57,7 @@ def send_telegram_message(message: str) -> bool:
         message = message[:4000] + "...\n\n(mensagem truncada)"
     
     data = {
-        "chat_id": CHAT_ID,
+        "chat_id": chat_id,
         "text": message,
         "parse_mode": "Markdown",
         "disable_web_page_preview": True
@@ -62,7 +66,7 @@ def send_telegram_message(message: str) -> bool:
     try:
         response = requests.post(url, data=data, timeout=15)
         if response.status_code == 200:
-            print("✅ Mensagem enviada com sucesso para o Telegram")
+            print(f"✅ Mensagem enviada para chat {chat_id}")
             return True
         else:
             print(f"❌ Erro na API do Telegram: {response.status_code}")
@@ -72,9 +76,7 @@ def send_telegram_message(message: str) -> bool:
         return False
 
 def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
-    """
-    Extrai o status de uma linha específica do HTML
-    """
+    """Extrai o status de uma linha específica do HTML"""
     resultado = {
         'status': '❓ Não encontrado',
         'detalhes': '',
@@ -82,13 +84,10 @@ def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
     }
     
     try:
-        # Procura pela linha no HTML
         if nome_linha in html_content:
-            # Pega o contexto ao redor da linha (500 caracteres depois)
             index = html_content.find(nome_linha)
             contexto = html_content[index:index + 500]
             
-            # Procura por padrões de status
             if "Operação Normal" in contexto:
                 resultado['status'] = "✅ Operação Normal"
                 resultado['success'] = True
@@ -112,23 +111,17 @@ def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
     
     return resultado
 
-def verificar_todas_linhas(url: str) -> List[Dict[str, Any]]:
-    """
-    Verifica todas as linhas disponíveis no site
-    """
+def verificar_todas_linhas() -> List[Dict[str, Any]]:
+    """Verifica todas as linhas disponíveis no site"""
     resultados = []
     
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        
-        response = requests.get(url, timeout=TIMEOUT, headers=headers)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(SITE_URL, timeout=TIMEOUT, headers=headers)
         
         if response.status_code == 200:
             html = response.text
             
-            # Verifica cada linha
             for linha_id, linha_info in TODAS_LINHAS.items():
                 status_info = extrair_status_linha(html, linha_info['nome'])
                 resultados.append({
@@ -139,99 +132,116 @@ def verificar_todas_linhas(url: str) -> List[Dict[str, Any]]:
                     'success': status_info['success'],
                     'detalhes': status_info['detalhes']
                 })
-        else:
-            print(f"❌ Erro HTTP ao acessar site: {response.status_code}")
-            
     except Exception as e:
         print(f"❌ Erro ao acessar site: {str(e)}")
     
     return resultados
 
-def verificar_linhas_selecionadas(linhas_escolhidas: List[str], url: str) -> List[Dict[str, Any]]:
-    """
-    Verifica apenas as linhas selecionadas pelo usuário
-    """
-    resultados = []
+def verificar_linha_especifica(linha_id: str) -> Optional[Dict[str, Any]]:
+    """Verifica uma linha específica"""
+    if linha_id not in TODAS_LINHAS:
+        return None
     
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        
-        response = requests.get(url, timeout=TIMEOUT, headers=headers)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(SITE_URL, timeout=TIMEOUT, headers=headers)
         
         if response.status_code == 200:
             html = response.text
+            linha_info = TODAS_LINHAS[linha_id]
+            status_info = extrair_status_linha(html, linha_info['nome'])
             
-            for linha_id in linhas_escolhidas:
-                if linha_id in TODAS_LINHAS:
-                    linha_info = TODAS_LINHAS[linha_id]
-                    status_info = extrair_status_linha(html, linha_info['nome'])
-                    resultados.append({
-                        'id': linha_id,
-                        'nome': linha_info['nome'],
-                        'operadora': linha_info['operadora'],
-                        'status': status_info['status'],
-                        'success': status_info['success'],
-                        'detalhes': status_info['detalhes']
-                    })
+            return {
+                'id': linha_id,
+                'nome': linha_info['nome'],
+                'operadora': linha_info['operadora'],
+                'status': status_info['status'],
+                'success': status_info['success'],
+                'detalhes': status_info['detalhes']
+            }
     except Exception as e:
         print(f"❌ Erro ao acessar site: {str(e)}")
     
-    return resultados
+    return None
 
-def verificar_falhas(resultados: List[Dict]) -> bool:
-    """
-    Verifica se há alguma falha nas linhas monitoradas
-    """
-    for resultado in resultados:
-        if "✅" not in resultado['status'] and "Operação Normal" not in resultado['status']:
-            return True
-    return False
+def handle_start(chat_id: str):
+    """Responde ao comando /start"""
+    mensagem = """
+🚇 *Bem-vindo ao Monitor Linhas SP!*
 
-def main():
-    """Função principal"""
-    print(f"🚇 Iniciando verificação - {get_sp_time()}")
+Eu sou um bot que monitora o status das linhas do Metrô/CPTM de São Paulo em tempo real.
+
+📋 *COMANDOS DISPONÍVEIS:*
+
+/start - Exibir esta mensagem
+/linha [número] - Verificar status de uma linha específica
+  Exemplo: `/linha 2` (Linha 2-Verde)
+  Exemplo: `/linha 15` (Linha 15-Prata)
+
+/todos - Verificar status de TODAS as linhas
+
+🔢 *NÚMEROS DAS LINHAS:*
+• 1 - Azul (Metrô)
+• 2 - Verde (Metrô)
+• 3 - Vermelha (Metrô)
+• 4 - Amarela (ViaQuatro)
+• 5 - Lilás (ViaMobilidade)
+• 7 - Rubi (CPTM)
+• 8 - Diamante (ViaMobilidade)
+• 9 - Esmeralda (ViaMobilidade)
+• 10 - Turquesa (CPTM)
+• 11 - Coral (CPTM)
+• 12 - Safira (CPTM)
+• 13 - Jade (CPTM)
+• 15 - Prata (Metrô)
+
+🤖 *NOTIFICAÇÕES AUTOMÁTICAS:*
+Além dos comandos, você receberá atualizações automáticas todos os dias às 7h, 17h e 22h.
+
+Digite `/todos` para ver o status agora mesmo!
+"""
+    send_telegram_message(chat_id, mensagem)
+
+def handle_linha(chat_id: str, linha_id: str):
+    """Responde ao comando /linha [número]"""
+    # Remove espaços e verifica se é número
+    linha_id = linha_id.strip()
     
-    # URL do site
-    URL = "https://ccm.artesp.sp.gov.br/metroferroviario/status-linhas/"
-    
-    # Carrega configuração das linhas a monitorar
-    linhas_monitorar = []
-    monitorar_todas = False
-    
-    if WEBSITES_JSON:
-        try:
-            config = json.loads(WEBSITES_JSON)
-            if isinstance(config, list):
-                for item in config:
-                    if 'id' in item:
-                        linhas_monitorar.append(item['id'])
-                    elif 'name' in item and "todas" in item['name'].lower():
-                        monitorar_todas = True
-        except:
-            # Se não conseguir parsear, usa configuração padrão
-            linhas_monitorar = ['2', '15']
-    else:
-        # Configuração padrão: linhas 2 e 15
-        linhas_monitorar = ['2', '15']
-    
-    print(f"📋 Monitorando: {', '.join(linhas_monitorar) if linhas_monitorar else 'TODAS as linhas'}")
-    
-    # Verifica as linhas
-    if monitorar_todas:
-        resultados = verificar_todas_linhas(URL)
-    else:
-        resultados = verificar_linhas_selecionadas(linhas_monitorar, URL)
-    
-    if not resultados:
-        print("❌ Nenhum resultado obtido")
-        send_telegram_message("🚨 *ERRO*\n\nNão foi possível obter o status das linhas. O site pode estar fora do ar.")
+    if not linha_id.isdigit():
+        send_telegram_message(chat_id, "❌ *Formato inválido!*\n\nUse: `/linha [número]`\nExemplo: `/linha 2`")
         return
     
-    # Monta mensagem
+    resultado = verificar_linha_especifica(linha_id)
+    
+    if resultado is None:
+        linhas_disponiveis = ", ".join(sorted(TODAS_LINHAS.keys()))
+        mensagem = f"❌ *Linha não encontrada!*\n\nLinhas disponíveis: {linhas_disponiveis}\n\nExemplo: `/linha 2`"
+        send_telegram_message(chat_id, mensagem)
+        return
+    
     now = get_sp_time()
-    mensagem = f"🚇 *Status das Linhas - {now}*\n\n"
+    mensagem = f"🚇 *Status da {resultado['nome']}*\n\n"
+    mensagem += f"📊 *Status:* {resultado['status']}\n"
+    if resultado['detalhes']:
+        mensagem += f"ℹ️ *Detalhes:* {resultado['detalhes']}\n"
+    mensagem += f"🏢 *Operadora:* {resultado['operadora']}\n"
+    mensagem += f"🕐 *Consultado:* {now}\n\n"
+    mensagem += f"Digite `/todos` para ver todas as linhas."
+    
+    send_telegram_message(chat_id, mensagem)
+
+def handle_todos(chat_id: str):
+    """Responde ao comando /todos"""
+    send_telegram_message(chat_id, "🔍 Consultando todas as linhas... Isso pode levar alguns segundos.")
+    
+    resultados = verificar_todas_linhas()
+    
+    if not resultados:
+        send_telegram_message(chat_id, "❌ *Erro ao consultar linhas!*\nO site pode estar fora do ar temporariamente.")
+        return
+    
+    now = get_sp_time()
+    mensagem = f"🚇 *Status de TODAS as Linhas - {now}*\n\n"
     
     # Agrupa por operadora
     linhas_por_operadora = {}
@@ -241,11 +251,10 @@ def main():
             linhas_por_operadora[operadora] = []
         linhas_por_operadora[operadora].append(r)
     
-    # Monta mensagem organizada
     for operadora, linhas in linhas_por_operadora.items():
         mensagem += f"*{operadora}:*\n"
         for linha in linhas:
-            mensagem += f"  • {linha['nome']}: {linha['status']}"
+            mensagem += f"  • *Linha {linha['id']}* - {linha['nome']}: {linha['status']}"
             if linha['detalhes']:
                 mensagem += f" _{linha['detalhes']}_"
             mensagem += "\n"
@@ -253,24 +262,111 @@ def main():
     
     mensagem += "---\n"
     mensagem += f"🕐 Atualizado: {now}\n"
+    mensagem += "Digite `/linha [número]` para ver uma linha específica."
     
-    # Verifica se há falhas
-    tem_falha = verificar_falhas(resultados)
+    send_telegram_message(chat_id, mensagem)
+
+@app.route(f'/{TELEGRAM_TOKEN}', methods=['POST'])
+def webhook():
+    """Recebe atualizações do Telegram via webhook"""
+    update = request.get_json()
     
-    # Decide se envia alerta
-    if tem_falha and ALERTAR_FALHA:
-        mensagem = "🚨 *ALERTA DE FALHA DETECTADA*\n\n" + mensagem
-        send_telegram_message(mensagem)
-        print("⚠️ Falha detectada - Alerta enviado!")
+    if 'message' in update and 'text' in update['message']:
+        chat_id = str(update['message']['chat']['id'])
+        text = update['message']['text'].strip()
+        
+        print(f"📩 Mensagem recebida de {chat_id}: {text}")
+        
+        if text == '/start':
+            handle_start(chat_id)
+        elif text == '/todos':
+            handle_todos(chat_id)
+        elif text.startswith('/linha'):
+            partes = text.split(' ', 1)
+            if len(partes) > 1:
+                linha_id = partes[1].strip()
+                handle_linha(chat_id, linha_id)
+            else:
+                send_telegram_message(chat_id, "❌ *Use:* `/linha [número]`\nExemplo: `/linha 2`")
+        else:
+            send_telegram_message(chat_id, "❌ *Comando não reconhecido!*\n\nDigite `/start` para ver os comandos disponíveis.")
     
-    elif not tem_falha and ALERTAR_FALHA:
-        # Se configurado para alertar só em falha, não envia
-        print("✅ Tudo normal - Nenhum alerta enviado (configurado para só alertar em falhas)")
+    return 'OK', 200
+
+@app.route('/')
+def index():
+    return 'Bot está rodando!', 200
+
+def enviar_notificacao_automatica():
+    """Função para enviar notificações automáticas agendadas"""
+    if not CHAT_ID:
+        print("❌ CHAT_ID não configurado para notificações automáticas")
+        return
     
-    else:
-        # Envia relatório normal
-        send_telegram_message(mensagem)
-        print("📊 Relatório normal enviado")
+    print(f"🚇 Enviando notificação automática - {get_sp_time()}")
+    
+    resultados = verificar_todas_linhas()
+    
+    if not resultados:
+        send_telegram_message(CHAT_ID, "❌ *Erro na verificação automática!*\nO site pode estar fora do ar.")
+        return
+    
+    now = get_sp_time()
+    mensagem = f"🚇 *Status Automático das Linhas - {now}*\n\n"
+    
+    # Mostra apenas as linhas com problemas primeiro (se houver)
+    linhas_com_problema = [r for r in resultados if "✅" not in r['status']]
+    linhas_normais = [r for r in resultados if "✅" in r['status']]
+    
+    if linhas_com_problema:
+        mensagem += "⚠️ *LINHAS COM PROBLEMAS:*\n"
+        for linha in linhas_com_problema:
+            mensagem += f"  • *Linha {linha['id']}*: {linha['status']}\n"
+        mensagem += "\n"
+    
+    if linhas_normais and not ALERTAR_FALHA:
+        mensagem += "✅ *LINHAS NORMAIS:*\n"
+        for linha in linhas_normais[:5]:  # Mostra só as primeiras 5 para não poluir
+            mensagem += f"  • *Linha {linha['id']}*: OK\n"
+        if len(linhas_normais) > 5:
+            mensagem += f"  ... e mais {len(linhas_normais)-5} linhas normais\n"
+        mensagem += "\n"
+    
+    mensagem += "---\n"
+    mensagem += f"🕐 Atualizado: {now}\n"
+    mensagem += "Digite `/todos` para ver todas as linhas."
+    
+    # Decide se envia baseado na configuração
+    if ALERTAR_FALHA and not linhas_com_problema:
+        print("✅ Tudo normal - Alerta automático suprimido (configurado para só alertar falhas)")
+        return
+    
+    send_telegram_message(CHAT_ID, mensagem)
+
+def setup_webhook():
+    """Configura o webhook no Telegram"""
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
+    # Substitua pela URL do seu serviço (ngrok, Render, etc)
+    webhook_url = os.environ.get('WEBHOOK_URL', '')
+    
+    if webhook_url:
+        response = requests.post(url, json={'url': f'{webhook_url}/{TELEGRAM_TOKEN}'})
+        if response.status_code == 200:
+            print("✅ Webhook configurado com sucesso!")
+        else:
+            print(f"❌ Erro ao configurar webhook: {response.text}")
+
+def main():
+    """Função principal para notificações automáticas (quando executado via GitHub Actions)"""
+    print(f"🚇 Iniciando verificação automática - {get_sp_time()}")
+    enviar_notificacao_automatica()
 
 if __name__ == "__main__":
-    main()
+    # Se estiver rodando no GitHub Actions, executa a função principal
+    if os.environ.get('GITHUB_ACTIONS') == 'true':
+        main()
+    else:
+        # Se estiver rodando como servidor web, configura o bot interativo
+        setup_webhook()
+        port = int(os.environ.get('PORT', 5000))
+        app.run(host='0.0.0.0', port=port)
