@@ -1,17 +1,16 @@
-# render.yaml - Configuração do Render
 services:
   - type: web
     name: monitor-linhas-sp-bot
     runtime: python
-    repo: https://github.com/SEU_USUARIO/monitor-linhas-sp  # ALTERE para seu repositório
+    repo: https://github.com/SEU_USUARIO/monitor-linhas-sp
     plan: free
-    region: sao-paulo  # ou oregon (mais próximo)
-    branch: main
+    region: oregon  # Regiões válidas: oregon, frankfurt, singapore, ohio, virginia
+    branch: main    # Verifique se existe esse branch no GitHub
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: gunicorn main:app
     envVars:
       - key: TELEGRAM_TOKEN
-        sync: false  # Será configurado manualmente por segurança
+        sync: false
       - key: CHAT_ID
         sync: false
       - key: ALERTAR_FALHA
@@ -20,4 +19,3 @@ services:
         value: true
       - key: PYTHON_VERSION
         value: 3.10.12
-    healthCheckPath: /healthz
