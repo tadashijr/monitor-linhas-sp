@@ -1,0 +1,30 @@
+name: Check Websites
+
+on:
+  schedule:
+    - cron: '0 10,22 * * *'  # 7:00 e 17:00 (UTC-3)
+  workflow_dispatch:  # Permite execução manual
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        pip install requests
+        
+    - name: Check websites and notify
+      env:
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        CHAT_ID: ${{ secrets.CHAT_ID }}
+        WEBSITES: ${{ secrets.WEBSITES }}
+      run: |
+        python main.py
