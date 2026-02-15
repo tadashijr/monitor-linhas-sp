@@ -180,7 +180,7 @@ def webhook():
 """
             send_telegram_message(chat_id, mensagem)
             
-        elif text == '/todos':
+        elif text == '/todas':
             send_telegram_message(chat_id, "🔍 Consultando...")
             resultados = verificar_todas_linhas()
             
