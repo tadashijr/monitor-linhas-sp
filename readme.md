@@ -110,6 +110,36 @@ Sugerir novas funcionalidades
 
 Enviar pull requests
 
+
+V2. # 🚇 Monitor Linhas SP - Bot do Telegram
+
+Bot automático para monitorar o status das linhas do Metrô/CPTM de São Paulo.
+
+## ✨ **NOVAS FUNCIONALIDADES**
+
+### ✅ **Monitoramento de TODAS as linhas**
+- Linhas 1-Azul, 2-Verde, 3-Vermelha, 4-Amarela, 5-Lilás
+- Linhas 7-Rubi, 8-Diamante, 9-Esmeralda, 10-Turquesa
+- Linhas 11-Coral, 12-Safira, 13-Jade, 15-Prata
+
+### ✅ **Escolha quais linhas monitorar**
+Você pode selecionar exatamente quais linhas quer acompanhar
+
+### ✅ **Alerta apenas em caso de falha**
+Opção para receber notificação SOMENTE quando algo estiver errado
+
+## 🚀 **Configuração**
+
+### Opção 1: Monitorar linhas específicas
+No secret `WEBSITES`, configure:
+```json
+[
+  {"id": "2", "nome": "Linha 2-Verde"},
+  {"id": "15", "nome": "Linha 15-Prata"},
+  {"id": "4", "nome": "Linha 4-Amarela"}
+]
+
+
 📬 Contato
 Bot no Telegram: @MonitorLinhasSP_bot
 
