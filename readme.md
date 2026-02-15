@@ -1,148 +1,234 @@
-🚇 Monitor Linhas SP - Bot do Telegram
-Bot do Telegram para monitoramento automático do status das linhas 2-Verde e 15-Prata do Metrô de São Paulo.
+# 🚇 Monitor Linhas SP - Bot do Telegram
 
-📋 Sobre o Projeto
-Este bot verifica automaticamente o site da ARTESP duas vezes ao dia (7h e 17h) e envia notificações no Telegram sobre o status operacional das linhas monitoradas.
+Bot automático para monitorar o status das linhas do Metrô/CPTM de São Paulo, com notificações agendadas e comandos interativos.
 
-✨ Funcionalidades
-✅ Verificação automática todos os dias às 7h e 17h
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Automa%C3%A7%C3%A3o-blue)
+![Render](https://img.shields.io/badge/Render-Deploy-success)
+![Telegram](https://img.shields.io/badge/Telegram-@MonitorLinhasSP__bot-blue)
+![Python](https://img.shields.io/badge/Python-3.10-yellow)
+![Cron-job](https://img.shields.io/badge/Cron--job-Ativo-brightgreen)
 
-✅ Monitoramento das linhas 2-Verde e 15-Prata
+---
 
-✅ Alertas apenas quando há mudança no status (opcional)
+## 📋 SUMÁRIO
 
-✅ Histórico completo de verificações via GitHub Actions
+- [Sobre o Projeto](#-sobre-o-projeto)
+- [Arquitetura da Solução](#-arquitetura-da-solução)
+- [Funcionalidades](#-funcionalidades)
+- [Como Funciona](#-como-funciona)
+- [Comandos do Bot](#-comandos-do-bot)
+- [Linhas Monitoradas](#-linhas-monitoradas)
+- [Configuração](#-configuração)
+- [Implantação no Render](#-implantação-no-render)
+- [Manter Bot Acordado](#-manter-bot-acordado-cron-job)
+- [Monitoramento](#-monitoramento)
 
-✅ Fácil de expandir para monitorar mais linhas
+---
 
-🚀 Como Usar
-Pré-requisitos
-Conta no GitHub (gratuita)
+## 📋 SOBRE O PROJETO
 
-Conta no Telegram
+Este bot monitora o status operacional das linhas do Metrô e CPTM de São Paulo, utilizando duas estratégias complementares para garantir que você nunca seja pego de surpresa com problemas no transporte público.
 
-Token de um bot do Telegram (criado via @BotFather)
+### 🎯 Objetivo
 
-Configuração Rápida
-Crie seu bot no Telegram via @BotFather e guarde o token
+Fornecer informações atualizadas sobre o funcionamento das linhas, tanto por notificações automáticas em horários estratégicos quanto por consulta sob demanda através de comandos.
 
-Use este template clicando em "Use this template" acima
+---
 
-Configure os segredos no seu repositório (Settings → Secrets and variables → Actions):
+## 🏗️ ARQUITETURA DA SOLUÇÃO
 
-TELEGRAM_TOKEN: token do seu bot
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         TELEGRAM BOT                            │
+│                    @MonitorLinhasSP_bot                         │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+        ┌───────────────────┴───────────────────┐
+        │                                       │
+        ▼                                       ▼
+┌───────────────────┐                 ┌───────────────────┐
+│  GITHUB ACTIONS   │                 │      RENDER       │
+│   (Automático)    │                 │    (Interativo)   │
+├───────────────────┤                 ├───────────────────┤
+│ ✓ Roda 3x ao dia  │                 │ ✓ 24/7 online     │
+│ ✓ 07:00 BRT       │                 │ ✓ Webhook Telegram│
+│ ✓ 17:00 BRT       │                 │ ✓ Resposta imediata│
+│ ✓ 22:00 BRT       │                 │ ✓ Flask + Gunicorn│
+│ ✓ Gratuito        │                 │ ✓ Free tier       │
+└─────────┬─────────┘                 └─────────┬─────────┘
+          │                                       │
+          └───────────────┬───────────────────────┘
+                          ▼
+               ┌─────────────────────────┐
+               │      CRON-JOB.ORG       │
+               │       (Keep Alive)      │
+               ├─────────────────────────┤
+               │ ✓ Ping a cada 10min     │
+               │ ✓ Mantém bot acordado   │
+               │ ✓ Gratuito              │
+               └────────────┬────────────┘
+                            ▼
+               ┌─────────────────────────┐
+               │       SITE ARTESP       │
+               │   Status das linhas     │
+               └─────────────────────────┘
+```
 
-CHAT_ID: seu ID de usuário no Telegram
+---
 
-WEBSITES: configuração das linhas a monitorar (ver exemplo abaixo)
+## ✨ FUNCIONALIDADES
 
-Ative o GitHub Actions na aba Actions do repositório
+| Funcionalidade | Descrição | Onde roda |
+|---------------|-----------|-----------|
+| ✅ Notificações automáticas | Envia status às 7h, 17h e 22h | GitHub Actions |
+| ✅ Comandos interativos | Responde a `/linha 2`, `/todos` | Render |
+| ✅ Alertas seletivos | Opção de notificar apenas falhas | Ambos |
+| ✅ Todas as linhas | Monitora as 13 linhas do sistema | Ambos |
+| ✅ Keep-alive | Mantém bot acordado 24/7 | Cron-job.org |
+| ✅ Histórico completo | Logs de todas as execuções | GitHub Actions |
+| ✅ Gratuito | 100% sem custo | Todos serviços |
 
-Exemplo de Configuração
-Secret WEBSITES:
+---
 
-json
-[
-  {
-    "name": "Linha 2-Verde",
-    "url": "https://ccm.artesp.sp.gov.br/metroferroviario/status-linhas/",
-    "validation_text": "Operação Normal",
-    "validation_type": "text"
-  },
-  {
-    "name": "Linha 15-Prata",
-    "url": "https://ccm.artesp.sp.gov.br/metroferroviario/status-linhas/",
-    "validation_text": "Operação Normal",
-    "validation_type": "text"
-  }
-]
-⚙️ Personalização
-Ajustar Horários
-Edite o arquivo .github/workflows/checker.yml:
+## ⚙️ COMO FUNCIONA
 
-yaml
-schedule:
-  - cron: '0 10,22 * * *'  # 7h e 17h (horário de Brasília)
-Formato cron: minuto hora * * * (UTC)
+### 🔄 Fluxo de Funcionamento
 
-Adicionar Mais Linhas
-Basta incluir novos itens no JSON do secret WEBSITES:
+- Usuário envia comando → Webhook no Render → Bot consulta site da ARTESP → Resposta imediata  
+- Horário programado → GitHub Actions executa → Bot consulta site → Envia notificação  
+- Sem atividade → Cron-job ping a cada 10min → Render mantém processo ativo  
 
-json
-{
-  "name": "Linha 1-Azul",
-  "url": "https://ccm.artesp.sp.gov.br/metroferroviario/status-linhas/",
-  "validation_text": "Operação Normal",
-  "validation_type": "text"
-}
-Notificações Seletivas
-No arquivo main.py, altere:
+### ⏰ Horários das Notificações
 
-python
-ALWAYS_NOTIFY = False  # True = notifica sempre, False = só em mudanças
-📊 Monitoramento
-Acesse a aba Actions para ver o histórico de execuções
+| Horário (BRT) | Propósito |
+|---------------|-----------|
+| 07:00 | Antes de sair para o trabalho |
+| 17:00 | Horário de pico da volta |
+| 22:00 | Planejamento do dia seguinte |
 
-Clique em qualquer execução para ver os logs detalhados
+---
 
-O GitHub envia email automático em caso de falha
+## 🤖 COMANDOS DO BOT
 
-🔧 Solução de Problemas
-Não recebo notificações
-Verifique se mandou /start para o bot no Telegram
+### 📱 Comandos Disponíveis
 
-Confirme se o CHAT_ID está correto
+| Comando | Descrição |
+|----------|-----------|
+| `/start` | Mensagem de boas-vindas |
+| `/linha [número]` | Status de uma linha específica |
+| `/todos` | Status de todas as linhas |
 
-Veja os logs em Actions → última execução
+### 💬 Exemplo
 
-Site mudou de formato
-Se o site da ARTESP for atualizado, pode ser necessário ajustar os seletores no arquivo main.py.
+**Comando:** `/linha 2`
 
-📝 Licença
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+```
+🚇 Status da Linha 2-Verde
 
-🤝 Contribuições
-Contribuições são bem-vindas! Sinta-se à vontade para:
+📊 Status: ✅ Operação Normal
+🏢 Operadora: Metrô
+🕐 Consultado: 15/02/2026 22:01:23
+```
 
-Reportar bugs
+---
 
-Sugerir novas funcionalidades
+## 🚇 LINHAS MONITORADAS
 
-Enviar pull requests
+| ID | Linha | Operadora |
+|----|--------|------------|
+| 1 | Linha 1-Azul | Metrô |
+| 2 | Linha 2-Verde | Metrô |
+| 3 | Linha 3-Vermelha | Metrô |
+| 4 | Linha 4-Amarela | ViaQuatro |
+| 5 | Linha 5-Lilás | ViaMobilidade |
+| 7 | Linha 7-Rubi | CPTM |
+| 8 | Linha 8-Diamante | ViaMobilidade |
+| 9 | Linha 9-Esmeralda | ViaMobilidade |
+| 10 | Linha 10-Turquesa | CPTM |
+| 11 | Linha 11-Coral | CPTM |
+| 12 | Linha 12-Safira | CPTM |
+| 13 | Linha 13-Jade | CPTM |
+| 15 | Linha 15-Prata | Metrô |
 
+---
 
-V2. # 🚇 Monitor Linhas SP - Bot do Telegram
+## 🔧 CONFIGURAÇÃO
 
-Bot automático para monitorar o status das linhas do Metrô/CPTM de São Paulo.
+### 📋 Pré-requisitos
 
-## ✨ **NOVAS FUNCIONALIDADES**
+- Conta no GitHub  
+- Conta no Render  
+- Conta no cron-job.org  
+- Bot criado no Telegram via @BotFather  
 
-### ✅ **Monitoramento de TODAS as linhas**
-- Linhas 1-Azul, 2-Verde, 3-Vermelha, 4-Amarela, 5-Lilás
-- Linhas 7-Rubi, 8-Diamante, 9-Esmeralda, 10-Turquesa
-- Linhas 11-Coral, 12-Safira, 13-Jade, 15-Prata
+---
 
-### ✅ **Escolha quais linhas monitorar**
-Você pode selecionar exatamente quais linhas quer acompanhar
+## 🔐 Variáveis de Ambiente
 
-### ✅ **Alerta apenas em caso de falha**
-Opção para receber notificação SOMENTE quando algo estiver errado
+### GitHub Secrets
 
-## 🚀 **Configuração**
+| Nome | Descrição |
+|------|-----------|
+| TELEGRAM_TOKEN | Token do bot |
+| CHAT_ID | Seu ID no Telegram |
+| ALERTAR_FALHA | true ou false |
 
-### Opção 1: Monitorar linhas específicas
-No secret `WEBSITES`, configure:
-```json
-[
-  {"id": "2", "nome": "Linha 2-Verde"},
-  {"id": "15", "nome": "Linha 15-Prata"},
-  {"id": "4", "nome": "Linha 4-Amarela"}
-]
+### Render
 
+| Nome | Valor |
+|------|--------|
+| TELEGRAM_TOKEN | Seu token |
+| CHAT_ID | Seu ID |
+| ALERTAR_FALHA | true |
+| PYTHON_VERSION | 3.10.12 |
 
-📬 Contato
-Bot no Telegram: @MonitorLinhasSP_bot
+---
 
-Issues: Abra uma issue neste repositório
+## 🚀 IMPLANTAÇÃO NO RENDER
 
-Desenvolvido com ❤️ para facilitar a vida dos usuários do Metrô de São Paulo
+### 📦 Via Blueprint (Recomendado)
+
+1. Faça push para o GitHub  
+2. No Render → New + → Blueprint  
+3. Conecte o repositório  
+4. Configure variáveis  
+5. Apply  
+
+### 🖥️ Via Web Service
+
+- Build Command: `pip install -r requirements.txt`  
+- Start Command: `gunicorn main:app`  
+- Plan: Free  
+
+---
+
+## ⏰ MANTER BOT ACORDADO (CRON-JOB)
+
+### Configuração
+
+- URL: `https://seu-app.onrender.com/healthz`
+- Execução: Every 10 minutes
+
+---
+
+## 📊 MONITORAMENTO
+
+### GitHub Actions
+- Aba Actions → Histórico completo
+- Logs detalhados
+
+### Render
+- Logs em tempo real  
+- Métricas  
+- Histórico de deploy  
+
+### Cron-job.org
+- Dashboard  
+- Estatísticas  
+- Alertas por email  
+
+---
+
+## 📄 LICENÇA
+
+Este projeto é de uso livre para fins educacionais e pessoais.
