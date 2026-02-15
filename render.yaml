@@ -4,8 +4,8 @@ services:
     runtime: python
     repo: https://github.com/SEU_USUARIO/monitor-linhas-sp
     plan: free
-    region: oregon  # Regiões válidas: oregon, frankfurt, singapore, ohio, virginia
-    branch: main    # Verifique se existe esse branch no GitHub
+    region: oregon
+    # branch: main   # Remove esta linha
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn main:app
     envVars:
@@ -15,7 +15,3 @@ services:
         sync: false
       - key: ALERTAR_FALHA
         value: true
-      - key: MODO_INTERATIVO
-        value: true
-      - key: PYTHON_VERSION
-        value: 3.10.12
