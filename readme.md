@@ -8,6 +8,8 @@ Bot automático para monitorar o status das linhas do Metrô/CPTM de São Paulo,
 ![Python](https://img.shields.io/badge/Python-3.10-yellow)
 ![Cron-job](https://img.shields.io/badge/Cron--job-Ativo-brightgreen)
 
+Acesso: https://t.me/MonitorLinhasSP_bot
+
 ---
 
 ## 📋 SUMÁRIO
