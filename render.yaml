@@ -2,7 +2,7 @@ services:
   - type: web
     name: monitor-linhas-sp-bot
     runtime: python
-    repo: https://github.com/SEU_USUARIO/monitor-linhas-sp
+    repo: https://github.com/tadashijr/monitor-linhas-sp
     plan: free
     region: oregon
     # branch: main   # Remove esta linha
