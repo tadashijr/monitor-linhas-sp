@@ -7,6 +7,11 @@ from typing import Dict, List, Any, Optional
 from flask import Flask, request
 import threading
 import time
+# Chame esta função antes de app.run()
+if __name__ == "__main__":
+    print(f"🚇 Bot iniciando - {get_sp_time()}")
+    setup_webhook()  # <-- Adicione esta linha
+    app.run(host='0.0.0.0', port=PORT)
 
 # Configurações
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
@@ -237,3 +242,26 @@ if __name__ == "__main__":
     print(f"🚇 Bot iniciando - {get_sp_time()}")
     setup_webhook()
     app.run(host='0.0.0.0', port=PORT)
+
+def setup_webhook():
+    """Configura o webhook automaticamente ao iniciar"""
+    render_url = os.environ.get('RENDER_EXTERNAL_URL')
+    if not render_url:
+        # Tenta descobrir a URL do Render
+        render_url = f"https://{os.environ.get('RENDER_SERVICE_NAME')}.onrender.com"
+    
+    if render_url and TELEGRAM_TOKEN:
+        webhook_url = f"{render_url}/webhook/{TELEGRAM_TOKEN}"
+        api_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
+        
+        try:
+            response = requests.post(api_url, json={'url': webhook_url})
+            if response.status_code == 200:
+                print(f"✅ Webhook configurado: {webhook_url}")
+                return True
+            else:
+                print(f"❌ Erro: {response.text}")
+        except Exception as e:
+            print(f"❌ Erro: {str(e)}")
+    
+    return False
