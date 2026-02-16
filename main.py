@@ -213,6 +213,49 @@ def webhook():
     
     return 'OK', 200
 
+def enviar_alerta_linhas():
+    """Envia alerta das linhas 2, 4 e 15 em dias úteis às 7h e 17h"""
+    if not CHAT_ID:
+        print("❌ CHAT_ID não configurado para alertas")
+        return
+    
+    # Verifica se é dia útil (segunda a sexta)
+    agora = datetime.now(pytz.timezone('America/Sao_Paulo'))
+    dia_semana = agora.weekday()  # 0=segunda, 4=sexta, 5=sábado, 6=domingo
+    
+    if dia_semana >= 5:  # 5 = sábado, 6 = domingo
+        print(f"📅 Final de semana - Alerta suprimido")
+        return
+    
+    print(f"🚇 Enviando alerta das linhas 2,4,15 - {get_sp_time()}")
+    
+    # Lista das linhas para alertar
+    linhas_alertar = ["2", "4", "15"]
+    
+    resultados = verificar_todas_linhas()
+    
+    if not resultados:
+        send_telegram_message(CHAT_ID, "❌ *Erro na verificação das linhas!*\nO site pode estar fora do ar.")
+        return
+    
+    now = get_sp_time()
+    mensagem = f"🚇 *Alerta Diário - {now}*\n\n"
+    
+    # Filtra apenas as linhas desejadas
+    for linha_id in linhas_alertar:
+        for resultado in resultados:
+            if resultado['id'] == linha_id:
+                mensagem += f"*{resultado['nome']}:* {resultado['status']}\n"
+                if resultado['detalhes']:
+                    mensagem += f"  _{resultado['detalhes']}_\n"
+                break
+    
+    mensagem += "\n---\n"
+    mensagem += "📊 Para ver todas as linhas, use /todas"
+    
+    send_telegram_message(CHAT_ID, mensagem)
+    print("✅ Alerta enviado com sucesso!")
+
 @app.route('/healthz')
 def health():
     """Endpoint de saúde para o Render"""
@@ -239,9 +282,15 @@ def setup_webhook():
             print(f"❌ Erro: {str(e)}")
 
 if __name__ == "__main__":
-    print(f"🚇 Bot iniciando - {get_sp_time()}")
-    setup_webhook()
-    app.run(host='0.0.0.0', port=PORT)
+    # Verifica se está rodando no GitHub Actions
+    if os.environ.get('GITHUB_ACTIONS') == 'true':
+        # Modo GitHub Actions
+        executar_modo_github_actions()
+    else:
+        # Modo Render - servidor web
+        print(f"🚇 Bot iniciando - {get_sp_time()}")
+        setup_webhook()
+        app.run(host='0.0.0.0', port=PORT)
 
 def setup_webhook():
     """Configura o webhook automaticamente ao iniciar"""
@@ -265,3 +314,17 @@ def setup_webhook():
             print(f"❌ Erro: {str(e)}")
     
     return False
+
+
+def executar_modo_github_actions():
+    """Função chamada quando executado pelo GitHub Actions"""
+    print(f"🚇 Executando no GitHub Actions - {get_sp_time()}")
+    
+    # Verifica qual tipo de execução
+    tipo_alerta = os.environ.get('TIPO_ALERTA', '')
+    
+    if tipo_alerta == 'linhas_especificas':
+        enviar_alerta_linhas()
+    else:
+        # Comportamento padrão (se quiser manter o original)
+        print("✅ Nenhum alerta específico configurado")
