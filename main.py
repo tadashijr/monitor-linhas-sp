@@ -5,22 +5,16 @@ from datetime import datetime
 import pytz
 from typing import Dict, List, Any, Optional
 from flask import Flask, request
-import threading
 import time
-# Chame esta função antes de app.run()
-if __name__ == "__main__":
-    print(f"🚇 Bot iniciando - {get_sp_time()}")
-    setup_webhook()  # <-- Adicione esta linha
-    app.run(host='0.0.0.0', port=PORT)
 
-# Configurações
+# ============================================
+# CONFIGURAÇÕES (ficam no topo)
+# ============================================
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CHAT_ID = os.environ.get('CHAT_ID')
 WEBSITES_JSON = os.environ.get('WEBSITES')
 ALERTAR_FALHA = os.environ.get('ALERTAR_FALHA', 'false').lower() == 'true'
-PORT = int(os.environ.get('PORT', 10000))  # Render usa PORT
-
-# URL do site
+PORT = int(os.environ.get('PORT', 10000))
 SITE_URL = "https://ccm.artesp.sp.gov.br/metroferroviario/status-linhas/"
 TIMEOUT = 30
 
@@ -43,6 +37,9 @@ TODAS_LINHAS = {
 
 app = Flask(__name__)
 
+# ============================================
+# FUNÇÕES AUXILIARES (definidas primeiro)
+# ============================================
 def get_sp_time() -> str:
     """Retorna a data/hora atual no fuso de São Paulo"""
     fuso_sp = pytz.timezone('America/Sao_Paulo')
@@ -155,64 +152,25 @@ def verificar_todas_linhas() -> List[Dict[str, Any]]:
     
     return resultados
 
-@app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
-def webhook():
-    """Recebe atualizações do Telegram"""
-    update = request.get_json()
-    
-    if 'message' in update and 'text' in update['message']:
-        chat_id = str(update['message']['chat']['id'])
-        text = update['message']['text'].strip()
+def setup_webhook():
+    """Configura o webhook no Telegram"""
+    render_url = os.environ.get('RENDER_EXTERNAL_URL')
+    if render_url and TELEGRAM_TOKEN:
+        webhook_url = f"{render_url}/webhook/{TELEGRAM_TOKEN}"
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
         
-        print(f"📩 Mensagem: {text}")
-        
-        if text == '/start':
-            mensagem = """
-🚇 *Bem-vindo ao Monitor Linhas SP!*
-
-📋 *COMANDOS:*
-/start - Esta mensagem
-/linha [número] - Status de uma linha
-  Ex: `/linha 2`
-/todas - Status de TODAS as linhas
-
-🤖 Notificações automáticas: 7h, 17h e 22h
-"""
-            send_telegram_message(chat_id, mensagem)
-            
-        elif text == '/todas':
-            send_telegram_message(chat_id, "🔍 Consultando...")
-            resultados = verificar_todas_linhas()
-            
-            if resultados:
-                now = get_sp_time()
-                msg = f"🚇 *Todas as Linhas - {now}*\n\n"
-                
-                for r in resultados:
-                    msg += f"• *{r['nome']}*: {r['status']}\n"
-                
-                send_telegram_message(chat_id, msg)
+        try:
+            response = requests.post(url, json={'url': webhook_url})
+            if response.status_code == 200:
+                print(f"✅ Webhook configurado: {webhook_url}")
             else:
-                send_telegram_message(chat_id, "❌ Erro na consulta")
-                
-        elif text.startswith('/linha'):
-            partes = text.split(' ', 1)
-            if len(partes) > 1:
-                linha_id = partes[1].strip()
-                resultado = verificar_linha_especifica(linha_id)
-                
-                if resultado:
-                    msg = f"🚇 *{resultado['nome']}*\n\n"
-                    msg += f"📊 Status: {resultado['status']}\n"
-                    if resultado['detalhes']:
-                        msg += f"ℹ️ {resultado['detalhes']}\n"
-                    send_telegram_message(chat_id, msg)
-                else:
-                    msg = "❌ Linha inválida. Use: 1,2,3,4,5,7,8,9,10,11,12,13,15"
-                    send_telegram_message(chat_id, msg)
-    
-    return 'OK', 200
+                print(f"❌ Erro webhook: {response.text}")
+        except Exception as e:
+            print(f"❌ Erro: {str(e)}")
 
+# ============================================
+# FUNÇÃO DE ALERTA DAS LINHAS ESPECÍFICAS (NOVA)
+# ============================================
 def enviar_alerta_linhas():
     """Envia alerta das linhas 2, 4 e 15 em dias úteis às 7h e 17h"""
     if not CHAT_ID:
@@ -256,66 +214,6 @@ def enviar_alerta_linhas():
     send_telegram_message(CHAT_ID, mensagem)
     print("✅ Alerta enviado com sucesso!")
 
-@app.route('/healthz')
-def health():
-    """Endpoint de saúde para o Render"""
-    return 'OK', 200
-
-@app.route('/')
-def index():
-    return 'Bot Monitor Linhas SP está rodando!', 200
-
-def setup_webhook():
-    """Configura o webhook no Telegram"""
-    render_url = os.environ.get('RENDER_EXTERNAL_URL')
-    if render_url:
-        webhook_url = f"{render_url}/webhook/{TELEGRAM_TOKEN}"
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
-        
-        try:
-            response = requests.post(url, json={'url': webhook_url})
-            if response.status_code == 200:
-                print(f"✅ Webhook configurado: {webhook_url}")
-            else:
-                print(f"❌ Erro webhook: {response.text}")
-        except Exception as e:
-            print(f"❌ Erro: {str(e)}")
-
-if __name__ == "__main__":
-    # Verifica se está rodando no GitHub Actions
-    if os.environ.get('GITHUB_ACTIONS') == 'true':
-        # Modo GitHub Actions
-        executar_modo_github_actions()
-    else:
-        # Modo Render - servidor web
-        print(f"🚇 Bot iniciando - {get_sp_time()}")
-        setup_webhook()
-        app.run(host='0.0.0.0', port=PORT)
-
-def setup_webhook():
-    """Configura o webhook automaticamente ao iniciar"""
-    render_url = os.environ.get('RENDER_EXTERNAL_URL')
-    if not render_url:
-        # Tenta descobrir a URL do Render
-        render_url = f"https://{os.environ.get('RENDER_SERVICE_NAME')}.onrender.com"
-    
-    if render_url and TELEGRAM_TOKEN:
-        webhook_url = f"{render_url}/webhook/{TELEGRAM_TOKEN}"
-        api_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
-        
-        try:
-            response = requests.post(api_url, json={'url': webhook_url})
-            if response.status_code == 200:
-                print(f"✅ Webhook configurado: {webhook_url}")
-                return True
-            else:
-                print(f"❌ Erro: {response.text}")
-        except Exception as e:
-            print(f"❌ Erro: {str(e)}")
-    
-    return False
-
-
 def executar_modo_github_actions():
     """Função chamada quando executado pelo GitHub Actions"""
     print(f"🚇 Executando no GitHub Actions - {get_sp_time()}")
@@ -326,5 +224,94 @@ def executar_modo_github_actions():
     if tipo_alerta == 'linhas_especificas':
         enviar_alerta_linhas()
     else:
-        # Comportamento padrão (se quiser manter o original)
-        print("✅ Nenhum alerta específico configurado")
+        # Comportamento padrão
+        print("ℹ️ Nenhum alerta específico configurado")
+
+# ============================================
+# ROTAS DO FLASK (WEBHOOK)
+# ============================================
+@app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
+def webhook():
+    """Recebe atualizações do Telegram"""
+    update = request.get_json()
+    
+    if 'message' in update and 'text' in update['message']:
+        chat_id = str(update['message']['chat']['id'])
+        text = update['message']['text'].strip()
+        
+        print(f"📩 Mensagem: {text}")
+        
+        if text == '/start':
+            mensagem = """
+🚇 *Bem-vindo ao Monitor Linhas SP!*
+
+📋 *COMANDOS:*
+/start - Esta mensagem
+/linha [número] - Status de uma linha
+  Ex: `/linha 2` (Verde)
+  Ex: `/linha 4` (Amarela)
+  Ex: `/linha 15` (Prata)
+/todas - Status de TODAS as linhas
+
+🤖 *NOTIFICAÇÕES AUTOMÁTICAS:*
+Segunda a sexta às 7h e 17h - Status das linhas 2, 4 e 15
+
+🔢 *LINHAS DISPONÍVEIS:* 1,2,3,4,5,7,8,9,10,11,12,13,15
+"""
+            send_telegram_message(chat_id, mensagem)
+            
+        elif text == '/todas':
+            send_telegram_message(chat_id, "🔍 Consultando...")
+            resultados = verificar_todas_linhas()
+            
+            if resultados:
+                now = get_sp_time()
+                msg = f"🚇 *Todas as Linhas - {now}*\n\n"
+                
+                for r in resultados:
+                    msg += f"• *{r['nome']}*: {r['status']}\n"
+                
+                send_telegram_message(chat_id, msg)
+            else:
+                send_telegram_message(chat_id, "❌ Erro na consulta")
+                
+        elif text.startswith('/linha'):
+            partes = text.split(' ', 1)
+            if len(partes) > 1:
+                linha_id = partes[1].strip()
+                resultado = verificar_linha_especifica(linha_id)
+                
+                if resultado:
+                    msg = f"🚇 *{resultado['nome']}*\n\n"
+                    msg += f"📊 Status: {resultado['status']}\n"
+                    if resultado['detalhes']:
+                        msg += f"ℹ️ {resultado['detalhes']}\n"
+                    send_telegram_message(chat_id, msg)
+                else:
+                    msg = "❌ Linha inválida. Use: 1,2,3,4,5,7,8,9,10,11,12,13,15"
+                    send_telegram_message(chat_id, msg)
+    
+    return 'OK', 200
+
+@app.route('/healthz')
+def health():
+    """Endpoint de saúde para o Render"""
+    return 'OK', 200
+
+@app.route('/')
+def index():
+    return 'Bot Monitor Linhas SP está rodando!', 200
+
+# ============================================
+# PONTO DE ENTRADA PRINCIPAL
+# ============================================
+if __name__ == "__main__":
+    # Verifica se está rodando no GitHub Actions
+    if os.environ.get('GITHUB_ACTIONS') == 'true':
+        # Modo GitHub Actions - executa o alerta e sai
+        executar_modo_github_actions()
+    else:
+        # Modo Render - servidor web (fica ouvindo 24/7)
+        print(f"🚇 Bot iniciando em modo servidor - {get_sp_time()}")
+        setup_webhook()
+        app.run(host='0.0.0.0', port=PORT)
