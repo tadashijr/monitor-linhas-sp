@@ -5,9 +5,6 @@ on:
     # Alertas das linhas 2,4,15 - Segunda a Sexta
     - cron: '0 10 * * 1-5'   # 07:00 BRT (segunda a sexta)
     - cron: '0 20 * * 1-5'   # 17:00 BRT (segunda a sexta)
-    
-    # Opcional: manter os alertas originais se quiser
-    # - cron: '0 1 * * *'    # 22:00 BRT (todos os dias)
   
   workflow_dispatch:  # Permite execução manual
 
