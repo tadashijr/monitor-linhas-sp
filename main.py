@@ -70,7 +70,7 @@ def send_telegram_message(chat_id: str, message: str) -> bool:
         return False
 
 def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
-    """Versão SIMPLIFICADA e mais robusta"""
+    """Extrai o status de uma linha específica do HTML - VERSÃO CORRIGIDA"""
     resultado = {
         'status': '❓ Não encontrado',
         'detalhes': '',
@@ -78,26 +78,61 @@ def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
     }
     
     try:
-        # Pega o número da linha
-        numero_linha = nome_linha.split()[1].replace("-", "").strip()
+        # Lista de possíveis variações do nome da linha
+        variacoes_nome = [
+            nome_linha,  # "Linha 4-Amarela"
+            nome_linha.replace("-", " "),  # "Linha 4 Amarela"
+            nome_linha.replace("-", " - "),  # "Linha 4 - Amarela"
+            nome_linha.split("-")[0].strip(),  # "Linha 4"
+        ]
         
-        # Procura por padrões mais genéricos
-        if f"Linha {numero_linha}" in html_content or f"Linha {numero_linha}-" in html_content:
-            # Encontrou a linha, agora procura o status em toda a página
-            if "Operação Normal" in html_content:
+        # Para linha 4, adiciona variações específicas
+        if "4" in nome_linha:
+            variacoes_nome.extend([
+                "ViaQuatro",
+                "Linha 4",
+                "Amarela"
+            ])
+        
+        # Procura por qualquer variação
+        encontrado = False
+        contexto = ""
+        
+        for variacao in variacoes_nome:
+            if variacao in html_content:
+                index = html_content.find(variacao)
+                contexto = html_content[index:index + 800]  # Aumentei para 800 caracteres
+                encontrado = True
+                print(f"✅ Encontrou variação: '{variacao}'")
+                break
+        
+        if encontrado:
+            # Procura por status no contexto
+            if "Operação Normal" in contexto:
                 resultado['status'] = "✅ Operação Normal"
                 resultado['success'] = True
-            elif "Velocidade Reduzida" in html_content:
+            elif "Operação Encerrada" in contexto:
+                resultado['status'] = "🟡 Operação Encerrada"
+                resultado['detalhes'] = "Linha fora de operação"
+            elif "Velocidade Reduzida" in contexto:
                 resultado['status'] = "🟠 Velocidade Reduzida"
-            elif "Paralisada" in html_content:
+                resultado['detalhes'] = "Operação com lentidão"
+            elif "Paralisada" in contexto:
                 resultado['status'] = "🔴 Paralisada"
+                resultado['detalhes'] = "Linha paralisada"
+            else:
+                # Se não achou palavras-chave, marca como encontrado mas status desconhecido
+                resultado['status'] = "⚠️ Status desconhecido"
+                resultado['detalhes'] = "Linha encontrada mas status não identificado"
+                # Pega um trecho do contexto para debug
+                debug = contexto[:100].replace("\n", " ").strip()
+                print(f"🔍 Contexto: {debug}...")
+        else:
+            print(f"❌ Linha '{nome_linha}' não encontrada no HTML")
             
-            # Se o status geral for Normal, assume que a linha específica também está
-            if resultado['success']:
-                resultado['detalhes'] = "Operação Normal em todo sistema"
-                
     except Exception as e:
         resultado['detalhes'] = str(e)[:50]
+        print(f"❌ Erro na extração: {str(e)}")
     
     return resultado
             
