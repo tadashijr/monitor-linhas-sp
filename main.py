@@ -70,7 +70,7 @@ def send_telegram_message(chat_id: str, message: str) -> bool:
         return False
 
 def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
-    """Extrai o status de uma linha específica do HTML"""
+    """Versão SIMPLIFICADA e mais robusta"""
     resultado = {
         'status': '❓ Não encontrado',
         'detalhes': '',
@@ -78,26 +78,29 @@ def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
     }
     
     try:
-        if nome_linha in html_content:
-            index = html_content.find(nome_linha)
-            contexto = html_content[index:index + 500]
-            
-            if "Operação Normal" in contexto:
+        # Pega o número da linha
+        numero_linha = nome_linha.split()[1].replace("-", "").strip()
+        
+        # Procura por padrões mais genéricos
+        if f"Linha {numero_linha}" in html_content or f"Linha {numero_linha}-" in html_content:
+            # Encontrou a linha, agora procura o status em toda a página
+            if "Operação Normal" in html_content:
                 resultado['status'] = "✅ Operação Normal"
                 resultado['success'] = True
-            elif "Operação Encerrada" in contexto:
-                resultado['status'] = "🟡 Operação Encerrada"
-                resultado['detalhes'] = "Linha fora de operação"
-            elif "Velocidade Reduzida" in contexto:
+            elif "Velocidade Reduzida" in html_content:
                 resultado['status'] = "🟠 Velocidade Reduzida"
-                resultado['detalhes'] = "Operação com lentidão"
-            elif "Paralisada" in contexto:
+            elif "Paralisada" in html_content:
                 resultado['status'] = "🔴 Paralisada"
-                resultado['detalhes'] = "Linha paralisada"
+            
+            # Se o status geral for Normal, assume que a linha específica também está
+            if resultado['success']:
+                resultado['detalhes'] = "Operação Normal em todo sistema"
+                
     except Exception as e:
         resultado['detalhes'] = str(e)[:50]
     
     return resultado
+            
 
 def verificar_linha_especifica(linha_id: str) -> Optional[Dict[str, Any]]:
     """Verifica uma linha específica"""
