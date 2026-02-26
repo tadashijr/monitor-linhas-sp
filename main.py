@@ -771,4 +771,9 @@ def index():
 # PONTO DE ENTRADA PRINCIPAL
 # ============================================
 if __name__ == "__main__":
-    if os.environ.get('GITHUB_ACTIONS')
+    if os.environ.get('GITHUB_ACTIONS') == 'true':
+        executar_modo_github_actions()
+    else:
+        print(f"🚇 Bot iniciando em modo servidor - {get_sp_time()}")
+        setup_webhook()
+        app.run(host='0.0.0.0', port=PORT)
