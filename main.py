@@ -8,18 +8,20 @@ from flask import Flask, request
 import time
 
 # ============================================
-# CONFIGURAÇÕES (ficam no topo)
+# CONFIGURAÇÕES
 # ============================================
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CHAT_ID = os.environ.get('CHAT_ID')
 WEBSITES_JSON = os.environ.get('WEBSITES')
 ALERTAR_FALHA = os.environ.get('ALERTAR_FALHA', 'false').lower() == 'true'
+HG_WEATHER_TOKEN = os.environ.get('HG_WEATHER_TOKEN')
 PORT = int(os.environ.get('PORT', 10000))
 SITE_URL = "https://ccm.artesp.sp.gov.br/metroferroviario/status-linhas/"
 TIMEOUT = 30
-HG_WEATHER_TOKEN = os.environ.get('HG_WEATHER_TOKEN')
 
-# Todas as linhas disponíveis
+# ============================================
+# TODAS AS LINHAS DISPONÍVEIS
+# ============================================
 TODAS_LINHAS = {
     "1": {"nome": "Linha 1-Azul", "operadora": "Metrô"},
     "2": {"nome": "Linha 2-Verde", "operadora": "Metrô"},
@@ -36,10 +38,111 @@ TODAS_LINHAS = {
     "15": {"nome": "Linha 15-Prata", "operadora": "Metrô"}
 }
 
+# ============================================
+# MAPA DE LINHAS POR REGIÃO (PARA O CLIMA)
+# ============================================
+LINHAS_POR_REGIAO = {
+    "1": {
+        "nome": "Linha 1-Azul",
+        "regioes": ["Norte", "Centro", "Sul"],
+        "bairros": ["Tucuruvi", "Santana", "Sé", "Jabaquara"],
+        "temp_media_metro": 20,
+        "estacoes_chave": ["Tucuruvi", "Santana", "Sé", "Jabaquara"]
+    },
+    "2": {
+        "nome": "Linha 2-Verde",
+        "regioes": ["Vila Prudente", "Centro", "Alto de Pinheiros"],
+        "bairros": ["Vila Prudente", "Paraíso", "Consolação", "Clínicas", "Alto de Pinheiros"],
+        "temp_media_metro": 21,
+        "estacoes_chave": ["Vila Prudente", "Paraíso", "Consolação", "Clínicas", "Alto de Pinheiros"]
+    },
+    "3": {
+        "nome": "Linha 3-Vermelha",
+        "regioes": ["Leste", "Centro", "Barra Funda"],
+        "bairros": ["Corinthians-Itaquera", "Tatuapé", "Sé", "Barra Funda"],
+        "temp_media_metro": 19,
+        "estacoes_chave": ["Corinthians-Itaquera", "Tatuapé", "Sé", "Barra Funda"]
+    },
+    "4": {
+        "nome": "Linha 4-Amarela",
+        "regioes": ["Luz", "Paulista", "Morumbi"],
+        "bairros": ["Luz", "República", "Paulista", "Faria Lima", "Morumbi"],
+        "temp_media_metro": 20,
+        "arborizada": True,
+        "estacoes_arvores": ["Trianon-Masp", "Clínicas"],
+        "estacoes_chave": ["Luz", "República", "Paulista", "Faria Lima", "Morumbi"]
+    },
+    "5": {
+        "nome": "Linha 5-Lilás",
+        "regioes": ["Sul", "Santo Amaro"],
+        "bairros": ["Capão Redondo", "Santo Amaro", "Chácara Klabin"],
+        "temp_media_metro": 22,
+        "estacoes_chave": ["Capão Redondo", "Santo Amaro", "Chácara Klabin"]
+    },
+    "7": {
+        "nome": "Linha 7-Rubi",
+        "regioes": ["Noroeste", "Franco da Rocha"],
+        "bairros": ["Luz", "Pirituba", "Franco da Rocha", "Jundiaí"],
+        "temp_media_metro": 19,
+        "trem_ar_condicionado": True,
+        "estacoes_chave": ["Luz", "Pirituba", "Franco da Rocha", "Jundiaí"]
+    },
+    "8": {
+        "nome": "Linha 8-Diamante",
+        "regioes": ["Oeste", "Barueri"],
+        "bairros": ["Júlio Prestes", "Osasco", "Barueri", "Itapevi"],
+        "temp_media_metro": 21,
+        "estacoes_chave": ["Júlio Prestes", "Osasco", "Barueri", "Itapevi"]
+    },
+    "9": {
+        "nome": "Linha 9-Esmeralda",
+        "regioes": ["Sudoeste", "Granja Viana"],
+        "bairros": ["Osasco", "Pinheiros", "Santo Amaro", "Granja Viana"],
+        "temp_media_metro": 20,
+        "estacoes_chave": ["Osasco", "Pinheiros", "Santo Amaro", "Granja Viana"]
+    },
+    "10": {
+        "nome": "Linha 10-Turquesa",
+        "regioes": ["Sudeste", "ABC"],
+        "bairros": ["Brás", "São Caetano", "Santo André", "Mauá", "Rio Grande da Serra"],
+        "temp_media_metro": 22,
+        "estacoes_chave": ["Brás", "São Caetano", "Santo André", "Mauá"]
+    },
+    "11": {
+        "nome": "Linha 11-Coral",
+        "regioes": ["Leste", "Mogi"],
+        "bairros": ["Luz", "Tatuapé", "Itaquera", "Mogi das Cruzes"],
+        "temp_media_metro": 21,
+        "estacoes_chave": ["Luz", "Tatuapé", "Itaquera", "Mogi das Cruzes"]
+    },
+    "12": {
+        "nome": "Linha 12-Safira",
+        "regioes": ["Leste", "Itaim Paulista"],
+        "bairros": ["Brás", "Tatuapé", "Itaim Paulista"],
+        "temp_media_metro": 21,
+        "estacoes_chave": ["Brás", "Tatuapé", "Itaim Paulista"]
+    },
+    "13": {
+        "nome": "Linha 13-Jade",
+        "regioes": ["Aeroporto Guarulhos"],
+        "bairros": ["Engenheiro Goulart", "Aeroporto Guarulhos"],
+        "temp_media_metro": 20,
+        "estacoes_chave": ["Engenheiro Goulart", "Aeroporto Guarulhos"]
+    },
+    "15": {
+        "nome": "Linha 15-Prata",
+        "regioes": ["Leste", "São Mateus"],
+        "bairros": ["Vila Prudente", "São Mateus", "Cidade Tiradentes"],
+        "temp_media_metro": 23,
+        "elevado": True,
+        "estacoes_chave": ["Vila Prudente", "São Mateus", "Cidade Tiradentes"]
+    }
+}
+
 app = Flask(__name__)
 
 # ============================================
-# FUNÇÕES AUXILIARES (definidas primeiro)
+# FUNÇÕES AUXILIARES
 # ============================================
 def get_sp_time() -> str:
     """Retorna a data/hora atual no fuso de São Paulo"""
@@ -70,8 +173,11 @@ def send_telegram_message(chat_id: str, message: str) -> bool:
         print(f"❌ Erro ao enviar mensagem: {str(e)}")
         return False
 
+# ============================================
+# FUNÇÕES DO METRÔ
+# ============================================
 def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
-    """Extrai o status de uma linha específica do HTML - VERSÃO CORRIGIDA"""
+    """Extrai o status de uma linha específica do HTML"""
     resultado = {
         'status': '❓ Não encontrado',
         'detalhes': '',
@@ -81,10 +187,10 @@ def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
     try:
         # Lista de possíveis variações do nome da linha
         variacoes_nome = [
-            nome_linha,  # "Linha 4-Amarela"
-            nome_linha.replace("-", " "),  # "Linha 4 Amarela"
-            nome_linha.replace("-", " - "),  # "Linha 4 - Amarela"
-            nome_linha.split("-")[0].strip(),  # "Linha 4"
+            nome_linha,
+            nome_linha.replace("-", " "),
+            nome_linha.replace("-", " - "),
+            nome_linha.split("-")[0].strip(),
         ]
         
         # Para linha 4, adiciona variações específicas
@@ -102,13 +208,12 @@ def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
         for variacao in variacoes_nome:
             if variacao in html_content:
                 index = html_content.find(variacao)
-                contexto = html_content[index:index + 800]  # Aumentei para 800 caracteres
+                contexto = html_content[index:index + 800]
                 encontrado = True
                 print(f"✅ Encontrou variação: '{variacao}'")
                 break
         
         if encontrado:
-            # Procura por status no contexto
             if "Operação Normal" in contexto:
                 resultado['status'] = "✅ Operação Normal"
                 resultado['success'] = True
@@ -122,12 +227,8 @@ def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
                 resultado['status'] = "🔴 Paralisada"
                 resultado['detalhes'] = "Linha paralisada"
             else:
-                # Se não achou palavras-chave, marca como encontrado mas status desconhecido
                 resultado['status'] = "⚠️ Status desconhecido"
                 resultado['detalhes'] = "Linha encontrada mas status não identificado"
-                # Pega um trecho do contexto para debug
-                debug = contexto[:100].replace("\n", " ").strip()
-                print(f"🔍 Contexto: {debug}...")
         else:
             print(f"❌ Linha '{nome_linha}' não encontrada no HTML")
             
@@ -136,7 +237,6 @@ def extrair_status_linha(html_content: str, nome_linha: str) -> Dict[str, Any]:
         print(f"❌ Erro na extração: {str(e)}")
     
     return resultado
-            
 
 def verificar_linha_especifica(linha_id: str) -> Optional[Dict[str, Any]]:
     """Verifica uma linha específica"""
@@ -191,156 +291,6 @@ def verificar_todas_linhas() -> List[Dict[str, Any]]:
     
     return resultados
 
-def setup_webhook():
-    """Configura o webhook no Telegram"""
-    render_url = os.environ.get('RENDER_EXTERNAL_URL')
-    if render_url and TELEGRAM_TOKEN:
-        webhook_url = f"{render_url}/webhook/{TELEGRAM_TOKEN}"
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
-        
-        try:
-            response = requests.post(url, json={'url': webhook_url})
-            if response.status_code == 200:
-                print(f"✅ Webhook configurado: {webhook_url}")
-            else:
-                print(f"❌ Erro webhook: {response.text}")
-        except Exception as e:
-            print(f"❌ Erro: {str(e)}")
-
-# ============================================
-# FUNÇÃO DE ALERTA DAS LINHAS ESPECÍFICAS (NOVA)
-# ============================================
-def enviar_alerta_linhas():
-    """Envia alerta das linhas 2, 4 e 15 em dias úteis às 7h e 17h"""
-    if not CHAT_ID:
-        print("❌ CHAT_ID não configurado para alertas")
-        return
-    
-    # Verifica se é dia útil (segunda a sexta)
-    agora = datetime.now(pytz.timezone('America/Sao_Paulo'))
-    dia_semana = agora.weekday()  # 0=segunda, 4=sexta, 5=sábado, 6=domingo
-    
-    if dia_semana >= 5:  # 5 = sábado, 6 = domingo
-        print(f"📅 Final de semana - Alerta suprimido")
-        return
-    
-    print(f"🚇 Enviando alerta das linhas 2,4,15 - {get_sp_time()}")
-    
-    # Lista das linhas para alertar
-    linhas_alertar = ["2", "4", "15"]
-    
-    resultados = verificar_todas_linhas()
-    
-    if not resultados:
-        send_telegram_message(CHAT_ID, "❌ *Erro na verificação das linhas!*\nO site pode estar fora do ar.")
-        return
-    
-    now = get_sp_time()
-    mensagem = f"🚇 *Alerta Diário - {now}*\n\n"
-    
-    # Filtra apenas as linhas desejadas
-    for linha_id in linhas_alertar:
-        for resultado in resultados:
-            if resultado['id'] == linha_id:
-                mensagem += f"*{resultado['nome']}:* {resultado['status']}\n"
-                if resultado['detalhes']:
-                    mensagem += f"  _{resultado['detalhes']}_\n"
-                break
-    
-    mensagem += "\n---\n"
-    mensagem += "📊 Para ver todas as linhas, use /todas"
-    
-    send_telegram_message(CHAT_ID, mensagem)
-    print("✅ Alerta enviado com sucesso!")
-
-def executar_modo_github_actions():
-    """Função chamada quando executado pelo GitHub Actions"""
-    print(f"🚇 Executando no GitHub Actions - {get_sp_time()}")
-    
-    # Verifica qual tipo de execução
-    tipo_alerta = os.environ.get('TIPO_ALERTA', '')
-    
-    if tipo_alerta == 'linhas_especificas':
-        enviar_alerta_linhas()
-    else:
-        # Comportamento padrão
-        print("ℹ️ Nenhum alerta específico configurado")
-
-# ============================================
-# ROTAS DO FLASK (WEBHOOK)
-# ============================================
-@app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
-def webhook():
-    """Recebe atualizações do Telegram"""
-    update = request.get_json()
-    
-    if 'message' in update and 'text' in update['message']:
-        chat_id = str(update['message']['chat']['id'])
-        text = update['message']['text'].strip()
-        
-        print(f"📩 Mensagem: {text}")
-        
-        if text == '/start':
-            mensagem = """
-🚇 *Bem-vindo ao Monitor Linhas SP!*
-
-📋 *COMANDOS:*
-/start - Esta mensagem
-/linha [número] - Status de uma linha
-  Ex: `/linha 2` (Verde)
-  Ex: `/linha 4` (Amarela)
-  Ex: `/linha 15` (Prata)
-/todas - Status de TODAS as linhas
-
-🤖 *NOTIFICAÇÕES AUTOMÁTICAS:*
-Segunda a sexta às 7h e 17h - Status das linhas 2, 4 e 15
-
-🔢 *LINHAS DISPONÍVEIS:* 1,2,3,4,5,7,8,9,10,11,12,13,15
-"""
-            send_telegram_message(chat_id, mensagem)
-            
-        elif text == '/todas':
-            send_telegram_message(chat_id, "🔍 Consultando...")
-            resultados = verificar_todas_linhas()
-            
-            if resultados:
-                now = get_sp_time()
-                msg = f"🚇 *Todas as Linhas - {now}*\n\n"
-                
-                for r in resultados:
-                    msg += f"• *{r['nome']}*: {r['status']}\n"
-                
-                send_telegram_message(chat_id, msg)
-            else:
-                send_telegram_message(chat_id, "❌ Erro na consulta")
-                
-        elif text.startswith('/linha'):
-            partes = text.split(' ', 1)
-            if len(partes) > 1:
-                linha_id = partes[1].strip()
-                resultado = verificar_linha_especifica(linha_id)
-                
-                if resultado:
-                    msg = f"🚇 *{resultado['nome']}*\n\n"
-                    msg += f"📊 Status: {resultado['status']}\n"
-                    if resultado['detalhes']:
-                        msg += f"ℹ️ {resultado['detalhes']}\n"
-                    send_telegram_message(chat_id, msg)
-                else:
-                    msg = "❌ Linha inválida. Use: 1,2,3,4,5,7,8,9,10,11,12,13,15"
-                    send_telegram_message(chat_id, msg)
-    
-    return 'OK', 200
-
-@app.route('/healthz')
-def health():
-    """Endpoint de saúde para o Render"""
-    return 'OK', 200
-
-@app.route('/')
-def index():
-    return 'Bot Monitor Linhas SP está rodando!', 200
-
 # ============================================
 # CLASSE: HG WEATHER API (100% GRATUITA)
 # ============================================
@@ -348,7 +298,7 @@ class HGWeatherAPI:
     """Integração com a API gratuita da HG Brasil"""
     
     def __init__(self):
-        self.token = os.environ.get('HG_WEATHER_TOKEN')
+        self.token = HG_WEATHER_TOKEN
         self.base_url = "https://api.hgbrasil.com/weather"
         self.cache = {}
         self.cache_expiration = 1800  # 30 minutos
@@ -575,16 +525,250 @@ class HGWeatherAPI:
         return msg
 
 # ============================================
+# FUNÇÕES DOS ALERTAS
+# ============================================
+def enviar_alerta_linhas():
+    """Envia alerta das linhas 2, 4 e 15 + clima"""
+    if not CHAT_ID:
+        print("❌ CHAT_ID não configurado para alertas")
+        return
+    
+    # Verifica se é dia útil (segunda a sexta)
+    agora = datetime.now(pytz.timezone('America/Sao_Paulo'))
+    dia_semana = agora.weekday()
+    
+    if dia_semana >= 5:
+        print(f"📅 Final de semana - Alerta suprimido")
+        return
+    
+    print(f"🚇 Enviando alerta das linhas 2,4,15 - {get_sp_time()}")
+    
+    # Linhas para alertar
+    linhas_alertar = ["2", "4", "15"]
+    
+    resultados = verificar_todas_linhas()
+    
+    if not resultados:
+        send_telegram_message(CHAT_ID, "❌ *Erro na verificação das linhas!*\nO site pode estar fora do ar.")
+        return
+    
+    now = get_sp_time()
+    mensagem = f"🚇 *Alerta Diário - {now}*\n\n"
+    
+    # Status das linhas
+    for linha_id in linhas_alertar:
+        for resultado in resultados:
+            if resultado['id'] == linha_id:
+                mensagem += f"*{resultado['nome']}:* {resultado['status']}\n"
+                if resultado['detalhes']:
+                    mensagem += f"  _{resultado['detalhes']}_\n"
+                break
+    
+    mensagem += "\n" + "="*30 + "\n\n"
+    mensagem += "🌤️ *Clima Personalizado por Linha:*\n\n"
+    
+    # Clima para cada linha
+    clima = HGWeatherAPI()
+    for linha_id in linhas_alertar:
+        if HG_WEATHER_TOKEN:
+            rec = clima.gerar_recomendacao_por_linha(linha_id)
+            if rec:
+                # Extrai só a parte das recomendações
+                partes = rec.split("---")
+                linhas_rec = partes[0].split("\n")
+                # Pega só as linhas relevantes
+                for line in linhas_rec:
+                    if "🌧️" in line or "🌦️" in line or "☀️" in line or \
+                       "🥶" in line or "🧥" in line or "👕" in line or "😎" in line or "🔥" in line:
+                        mensagem += f"*Linha {linha_id}:* {line.strip()}\n"
+        else:
+            mensagem += f"*Linha {linha_id}:* ⚠️ Token do clima não configurado\n"
+    
+    mensagem += "\n---\n"
+    mensagem += "📊 Para ver todas as linhas, use /todas\n"
+    mensagem += "🌤️ Para clima detalhado, use /clima [linha]"
+    
+    send_telegram_message(CHAT_ID, mensagem)
+    print("✅ Alerta enviado com sucesso!")
+
+def executar_modo_github_actions():
+    """Função chamada quando executado pelo GitHub Actions"""
+    print(f"🚇 Executando no GitHub Actions - {get_sp_time()}")
+    
+    tipo_alerta = os.environ.get('TIPO_ALERTA', '')
+    
+    if tipo_alerta == 'linhas_especificas':
+        enviar_alerta_linhas()
+    else:
+        print("ℹ️ Nenhum alerta específico configurado")
+
+def setup_webhook():
+    """Configura o webhook no Telegram"""
+    render_url = os.environ.get('RENDER_EXTERNAL_URL')
+    if render_url and TELEGRAM_TOKEN:
+        webhook_url = f"{render_url}/webhook/{TELEGRAM_TOKEN}"
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
+        
+        try:
+            response = requests.post(url, json={'url': webhook_url})
+            if response.status_code == 200:
+                print(f"✅ Webhook configurado: {webhook_url}")
+            else:
+                print(f"❌ Erro webhook: {response.text}")
+        except Exception as e:
+            print(f"❌ Erro: {str(e)}")
+
+# ============================================
+# ROTAS DO FLASK (WEBHOOK)
+# ============================================
+@app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
+def webhook():
+    """Recebe atualizações do Telegram"""
+    update = request.get_json()
+    
+    if 'message' in update and 'text' in update['message']:
+        chat_id = str(update['message']['chat']['id'])
+        text = update['message']['text'].strip()
+        
+        print(f"📩 Mensagem: {text}")
+        
+        if text == '/start':
+            mensagem = """
+🚇 *Bem-vindo ao Monitor Linhas SP + Clima Inteligente!*
+
+📋 *COMANDOS DISPONÍVEIS:*
+
+🚆 *Metrô:*
+/linha [número] - Status da linha
+/todas - Status de todas as linhas
+
+🌤️ *Clima Inteligente:*
+/clima [número] - Recomendação PERSONALIZADA para sua linha
+  Ex: `/clima 2` (linha 2-Verde)
+  Ex: `/clima 4` (linha 4-Amarela)
+  Ex: `/clima 15` (linha 15-Prata)
+
+/previsao [linha] - Previsão de 5 dias para sua região
+
+🤖 *Notificações automáticas:*
+Segunda a sexta 7h e 17h: Status linhas 2,4,15 + clima personalizado
+
+🔢 *Linhas disponíveis:* 1,2,3,4,5,7,8,9,10,11,12,13,15
+"""
+            send_telegram_message(chat_id, mensagem)
+            
+        elif text == '/todas':
+            send_telegram_message(chat_id, "🔍 Consultando...")
+            resultados = verificar_todas_linhas()
+            
+            if resultados:
+                now = get_sp_time()
+                msg = f"🚇 *Todas as Linhas - {now}*\n\n"
+                
+                # Agrupa por operadora para melhor visualização
+                por_operadora = {}
+                for r in resultados:
+                    op = r['operadora']
+                    if op not in por_operadora:
+                        por_operadora[op] = []
+                    por_operadora[op].append(r)
+                
+                for operadora, linhas in por_operadora.items():
+                    msg += f"*{operadora}:*\n"
+                    for linha in linhas:
+                        msg += f"  • *Linha {linha['id']}*: {linha['status']}\n"
+                    msg += "\n"
+                
+                send_telegram_message(chat_id, msg)
+            else:
+                send_telegram_message(chat_id, "❌ Erro na consulta")
+                
+        elif text.startswith('/linha'):
+            partes = text.split(' ', 1)
+            if len(partes) > 1:
+                linha_id = partes[1].strip()
+                resultado = verificar_linha_especifica(linha_id)
+                
+                if resultado:
+                    msg = f"🚇 *{resultado['nome']}*\n\n"
+                    msg += f"📊 Status: {resultado['status']}\n"
+                    if resultado['detalhes']:
+                        msg += f"ℹ️ {resultado['detalhes']}\n"
+                    send_telegram_message(chat_id, msg)
+                else:
+                    msg = "❌ Linha inválida. Use: 1,2,3,4,5,7,8,9,10,11,12,13,15"
+                    send_telegram_message(chat_id, msg)
+        
+        # ===== COMANDOS DE CLIMA =====
+        elif text.startswith('/clima'):
+            partes = text.split(' ', 1)
+            if len(partes) > 1:
+                linha_id = partes[1].strip()
+                
+                if linha_id in LINHAS_POR_REGIAO:
+                    if not HG_WEATHER_TOKEN:
+                        send_telegram_message(chat_id, "❌ *Token da HG Weather não configurado!*\n\nEntre em contato com o administrador.")
+                        return
+                    
+                    send_telegram_message(chat_id, "🔍 Consultando clima em tempo real...")
+                    
+                    clima = HGWeatherAPI()
+                    mensagem = clima.gerar_recomendacao_por_linha(linha_id)
+                    if mensagem:
+                        send_telegram_message(chat_id, mensagem)
+                    else:
+                        send_telegram_message(chat_id, "❌ Erro ao buscar dados do clima")
+                else:
+                    msg = f"❌ Linha {linha_id} não encontrada!\nDisponíveis: 1,2,3,4,5,7,8,9,10,11,12,13,15"
+                    send_telegram_message(chat_id, msg)
+            else:
+                msg = """
+🌤️ *Recomendação por Linha*
+
+Use: `/clima [número da linha]`
+
+Exemplos:
+/clima 2 - Linha 2-Verde
+/clima 4 - Linha 4-Amarela
+/clima 15 - Linha 15-Prata
+
+🔢 *Linhas disponíveis:* 1,2,3,4,5,7,8,9,10,11,12,13,15
+"""
+                send_telegram_message(chat_id, msg)
+        
+        elif text.startswith('/previsao'):
+            partes = text.split(' ', 1)
+            linha_id = partes[1].strip() if len(partes) > 1 else "2"
+            
+            if linha_id in LINHAS_POR_REGIAO:
+                if not HG_WEATHER_TOKEN:
+                    send_telegram_message(chat_id, "❌ *Token da HG Weather não configurado!*")
+                    return
+                
+                send_telegram_message(chat_id, "🔍 Buscando previsão...")
+                
+                clima = HGWeatherAPI()
+                msg = clima.gerar_previsao_5dias(linha_id)
+                
+                if msg:
+                    send_telegram_message(chat_id, msg)
+                else:
+                    send_telegram_message(chat_id, "❌ Erro ao buscar previsão")
+            else:
+                send_telegram_message(chat_id, "❌ Linha inválida")
+    
+    return 'OK', 200
+
+@app.route('/healthz')
+def health():
+    return 'OK', 200
+
+@app.route('/')
+def index():
+    return 'Bot Monitor Linhas SP está rodando!', 200
+
+# ============================================
 # PONTO DE ENTRADA PRINCIPAL
 # ============================================
 if __name__ == "__main__":
-    # Verifica se está rodando no GitHub Actions
-    if os.environ.get('GITHUB_ACTIONS') == 'true':
-        # Modo GitHub Actions - executa o alerta e sai
-        executar_modo_github_actions()
-    else:
-        # Modo Render - servidor web (fica ouvindo 24/7)
-        print(f"🚇 Bot iniciando em modo servidor - {get_sp_time()}")
-        setup_webhook()
-        app.run(host='0.0.0.0', port=PORT)
-
+    if os.environ.get('GITHUB_ACTIONS')
