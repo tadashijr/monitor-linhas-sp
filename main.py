@@ -510,7 +510,7 @@ class OpenMeteoAPI:
 ---
 💡 *Linha:* {LINHAS_POR_REGIAO[linha_id]['nome']}
 🕐 *Atualizado:* {get_sp_time()}
-⚡ Dados via Open-Meteo (gratuito, sem token)
+⚡ Dados via Open-Meteo
 """
         return mensagem
     
