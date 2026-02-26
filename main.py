@@ -14,7 +14,6 @@ TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CHAT_ID = os.environ.get('CHAT_ID')
 WEBSITES_JSON = os.environ.get('WEBSITES')
 ALERTAR_FALHA = os.environ.get('ALERTAR_FALHA', 'false').lower() == 'true'
-HG_WEATHER_TOKEN = os.environ.get('HG_WEATHER_TOKEN')
 PORT = int(os.environ.get('PORT', 10000))
 SITE_URL = "https://ccm.artesp.sp.gov.br/metroferroviario/status-linhas/"
 TIMEOUT = 30
@@ -47,6 +46,7 @@ LINHAS_POR_REGIAO = {
         "regioes": ["Norte", "Centro", "Sul"],
         "bairros": ["Tucuruvi", "Santana", "Sé", "Jabaquara"],
         "temp_media_metro": 20,
+        "lat": -23.5505, "lon": -46.6333,  # Centro de SP
         "estacoes_chave": ["Tucuruvi", "Santana", "Sé", "Jabaquara"]
     },
     "2": {
@@ -54,6 +54,7 @@ LINHAS_POR_REGIAO = {
         "regioes": ["Vila Prudente", "Centro", "Alto de Pinheiros"],
         "bairros": ["Vila Prudente", "Paraíso", "Consolação", "Clínicas", "Alto de Pinheiros"],
         "temp_media_metro": 21,
+        "lat": -23.5717, "lon": -46.6456,  # Paraíso
         "estacoes_chave": ["Vila Prudente", "Paraíso", "Consolação", "Clínicas", "Alto de Pinheiros"]
     },
     "3": {
@@ -61,6 +62,7 @@ LINHAS_POR_REGIAO = {
         "regioes": ["Leste", "Centro", "Barra Funda"],
         "bairros": ["Corinthians-Itaquera", "Tatuapé", "Sé", "Barra Funda"],
         "temp_media_metro": 19,
+        "lat": -23.5337, "lon": -46.5776,  # Tatuapé
         "estacoes_chave": ["Corinthians-Itaquera", "Tatuapé", "Sé", "Barra Funda"]
     },
     "4": {
@@ -69,6 +71,7 @@ LINHAS_POR_REGIAO = {
         "bairros": ["Luz", "República", "Paulista", "Faria Lima", "Morumbi"],
         "temp_media_metro": 20,
         "arborizada": True,
+        "lat": -23.5578, "lon": -46.6622,  # Paulista
         "estacoes_arvores": ["Trianon-Masp", "Clínicas"],
         "estacoes_chave": ["Luz", "República", "Paulista", "Faria Lima", "Morumbi"]
     },
@@ -77,6 +80,7 @@ LINHAS_POR_REGIAO = {
         "regioes": ["Sul", "Santo Amaro"],
         "bairros": ["Capão Redondo", "Santo Amaro", "Chácara Klabin"],
         "temp_media_metro": 22,
+        "lat": -23.6526, "lon": -46.7073,  # Santo Amaro
         "estacoes_chave": ["Capão Redondo", "Santo Amaro", "Chácara Klabin"]
     },
     "7": {
@@ -85,6 +89,7 @@ LINHAS_POR_REGIAO = {
         "bairros": ["Luz", "Pirituba", "Franco da Rocha", "Jundiaí"],
         "temp_media_metro": 19,
         "trem_ar_condicionado": True,
+        "lat": -23.5034, "lon": -46.6489,  # Pirituba
         "estacoes_chave": ["Luz", "Pirituba", "Franco da Rocha", "Jundiaí"]
     },
     "8": {
@@ -92,6 +97,7 @@ LINHAS_POR_REGIAO = {
         "regioes": ["Oeste", "Barueri"],
         "bairros": ["Júlio Prestes", "Osasco", "Barueri", "Itapevi"],
         "temp_media_metro": 21,
+        "lat": -23.5329, "lon": -46.7917,  # Osasco
         "estacoes_chave": ["Júlio Prestes", "Osasco", "Barueri", "Itapevi"]
     },
     "9": {
@@ -99,6 +105,7 @@ LINHAS_POR_REGIAO = {
         "regioes": ["Sudoeste", "Granja Viana"],
         "bairros": ["Osasco", "Pinheiros", "Santo Amaro", "Granja Viana"],
         "temp_media_metro": 20,
+        "lat": -23.5673, "lon": -46.6964,  # Pinheiros
         "estacoes_chave": ["Osasco", "Pinheiros", "Santo Amaro", "Granja Viana"]
     },
     "10": {
@@ -106,6 +113,7 @@ LINHAS_POR_REGIAO = {
         "regioes": ["Sudeste", "ABC"],
         "bairros": ["Brás", "São Caetano", "Santo André", "Mauá", "Rio Grande da Serra"],
         "temp_media_metro": 22,
+        "lat": -23.6565, "lon": -46.5285,  # Santo André
         "estacoes_chave": ["Brás", "São Caetano", "Santo André", "Mauá"]
     },
     "11": {
@@ -113,6 +121,7 @@ LINHAS_POR_REGIAO = {
         "regioes": ["Leste", "Mogi"],
         "bairros": ["Luz", "Tatuapé", "Itaquera", "Mogi das Cruzes"],
         "temp_media_metro": 21,
+        "lat": -23.5629, "lon": -46.3911,  # Itaquera
         "estacoes_chave": ["Luz", "Tatuapé", "Itaquera", "Mogi das Cruzes"]
     },
     "12": {
@@ -120,6 +129,7 @@ LINHAS_POR_REGIAO = {
         "regioes": ["Leste", "Itaim Paulista"],
         "bairros": ["Brás", "Tatuapé", "Itaim Paulista"],
         "temp_media_metro": 21,
+        "lat": -23.5405, "lon": -46.4161,  # Itaim Paulista
         "estacoes_chave": ["Brás", "Tatuapé", "Itaim Paulista"]
     },
     "13": {
@@ -127,6 +137,7 @@ LINHAS_POR_REGIAO = {
         "regioes": ["Aeroporto Guarulhos"],
         "bairros": ["Engenheiro Goulart", "Aeroporto Guarulhos"],
         "temp_media_metro": 20,
+        "lat": -23.4356, "lon": -46.4731,  # Aeroporto Guarulhos
         "estacoes_chave": ["Engenheiro Goulart", "Aeroporto Guarulhos"]
     },
     "15": {
@@ -135,6 +146,7 @@ LINHAS_POR_REGIAO = {
         "bairros": ["Vila Prudente", "São Mateus", "Cidade Tiradentes"],
         "temp_media_metro": 23,
         "elevado": True,
+        "lat": -23.6122, "lon": -46.5633,  # São Mateus
         "estacoes_chave": ["Vila Prudente", "São Mateus", "Cidade Tiradentes"]
     }
 }
@@ -292,29 +304,25 @@ def verificar_todas_linhas() -> List[Dict[str, Any]]:
     return resultados
 
 # ============================================
-# CLASSE: HG WEATHER API (100% GRATUITA)
+# NOVA CLASSE: OPEN-METEO API (100% GRATUITA, SEM TOKEN)
 # ============================================
-class HGWeatherAPI:
-    """Integração com a API gratuita da HG Brasil"""
+class OpenMeteoAPI:
+    """Integração com a API gratuita Open-Meteo (não precisa de token)"""
     
     def __init__(self):
-        self.token = HG_WEATHER_TOKEN
-        self.base_url = "https://api.hgbrasil.com/weather"
+        self.base_url = "https://api.open-meteo.com/v1/forecast"
         self.cache = {}
         self.cache_expiration = 1800  # 30 minutos
     
     def get_previsao(self, linha_id):
         """Busca previsão do tempo para a região da linha"""
-        if not self.token:
-            print("⚠️ Token da HG Weather não configurado")
-            return None
-            
         if linha_id not in LINHAS_POR_REGIAO:
             return None
         
-        # Pega o primeiro bairro como referência
-        bairros = LINHAS_POR_REGIAO[linha_id].get('bairros', ['São Paulo'])
-        cidade_ref = bairros[0]
+        # Pega coordenadas da linha
+        coord = LINHAS_POR_REGIAO[linha_id]
+        lat = coord.get('lat', -23.5505)
+        lon = coord.get('lon', -46.6333)
         
         # Verifica cache
         cache_key = f"weather_{linha_id}"
@@ -326,60 +334,76 @@ class HGWeatherAPI:
         try:
             # Parâmetros da requisição
             params = {
-                'key': self.token,
-                'city_name': f"{cidade_ref},SP",
-                'format': 'json-cors'
+                "latitude": lat,
+                "longitude": lon,
+                "current": ["temperature_2m", "relative_humidity_2m", "weather_code", "wind_speed_10m"],
+                "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum", "precipitation_probability_max", "weather_code"],
+                "timezone": "America/Sao_Paulo",
+                "forecast_days": 5
             }
             
             response = requests.get(self.base_url, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
-                
-                # Verifica se a requisição foi bem-sucedida
-                if data.get('valid_key', False) and data.get('results'):
-                    self.cache[cache_key] = (time.time(), data)
-                    return data
-                else:
-                    print(f"❌ Erro na API HG: {data.get('message', 'Erro desconhecido')}")
-                    return None
+                self.cache[cache_key] = (time.time(), data)
+                return data
             else:
-                print(f"❌ Erro HTTP: {response.status_code}")
+                print(f"❌ Erro Open-Meteo: {response.status_code}")
                 return None
                 
         except Exception as e:
             print(f"❌ Erro ao buscar clima: {str(e)}")
             return None
     
+    def weather_code_to_description(self, code):
+        """Converte código WMO para descrição em português"""
+        # Códigos WMO (World Meteorological Organization)
+        weather_codes = {
+            0: "Céu limpo ☀️",
+            1: "Principalmente limpo 🌤️",
+            2: "Parcialmente nublado ⛅",
+            3: "Nublado ☁️",
+            45: "Nevoeiro 🌫️",
+            48: "Nevoeiro com geada 🌫️❄️",
+            51: "Garoa leve 🌦️",
+            53: "Garoa moderada 🌦️",
+            55: "Garoa intensa 🌧️",
+            61: "Chuva fraca 🌧️",
+            63: "Chuva moderada 🌧️",
+            65: "Chuva forte 🌧️🌊",
+            71: "Neve fraca ❄️",
+            73: "Neve moderada ❄️",
+            75: "Neve forte ❄️🌨️",
+            80: "Pancadas de chuva 🌦️",
+            81: "Pancadas de chuva moderada 🌧️",
+            82: "Pancadas de chuva violenta 🌧️🌊",
+            95: "Tempestade ⛈️",
+            96: "Tempestade com granizo pequeno ⛈️🧊",
+            99: "Tempestade com granizo grande ⛈️🧊🧊"
+        }
+        return weather_codes.get(code, f"Condição {code} 🤷")
+    
     def recomendar_guarda_chuva(self, linha_id):
         """Recomenda guarda-chuva baseado na previsão"""
         dados = self.get_previsao(linha_id)
         
-        if not dados or 'results' not in dados:
+        if not dados:
             return "❓ Não foi possível verificar chuva", "🤷"
         
-        results = dados['results']
-        
-        # Dados de chuva
-        chuva_mm = results.get('rain', 0)
-        
-        # Pega previsão do dia atual no forecast
-        forecast = results.get('forecast', [])
-        hoje = forecast[0] if forecast else {}
-        prob_chuva = hoje.get('rain_probability', 0)
-        
-        # Se não veio no rain, pega do forecast
-        if chuva_mm == 0 and 'rain' in hoje:
-            chuva_mm = hoje.get('rain', 0)
+        # Pega previsão de chuva
+        daily = dados.get('daily', {})
+        precip_sum = daily.get('precipitation_sum', [0])[0]
+        precip_prob = daily.get('precipitation_probability_max', [0])[0]
         
         # Ajuste para linhas elevadas (ex: 15-Prata)
         if linha_id == "15" or LINHAS_POR_REGIAO.get(linha_id, {}).get('elevado', False):
-            chuva_mm *= 1.5
+            precip_sum *= 1.5
         
-        if chuva_mm >= 5 or prob_chuva > 70:
-            return f"🌧️ **LEVA GUARDA-CHUVA!** Probabilidade {prob_chuva}% de chuva ({chuva_mm:.1f}mm)", "☔"
-        elif chuva_mm >= 1 or prob_chuva > 30:
-            return f"🌦️ **Melhor levar**... Pode garoar ({chuva_mm:.1f}mm, {prob_chuva}%)", "☂️"
+        if precip_sum >= 5 or precip_prob > 70:
+            return f"🌧️ **LEVA GUARDA-CHUVA!** Probabilidade {precip_prob}% de chuva ({precip_sum:.1f}mm)", "☔"
+        elif precip_sum >= 1 or precip_prob > 30:
+            return f"🌦️ **Melhor levar**... Pode garoar ({precip_sum:.1f}mm, {precip_prob}%)", "☂️"
         else:
             return "☀️ **Pode deixar em casa**! Sem chuva prevista", "😎"
     
@@ -387,24 +411,31 @@ class HGWeatherAPI:
         """Recomenda blusa baseado na temperatura"""
         dados = self.get_previsao(linha_id)
         
-        if not dados or 'results' not in dados:
+        if not dados:
             return "❓ Temperatura não disponível", "🤷"
         
-        results = dados['results']
+        current = dados.get('current', {})
+        daily = dados.get('daily', {})
         
-        temp_atual = results.get('temp', 22)
-        descricao = results.get('description', '')
-        umidade = results.get('humidity', 0)
+        temp_atual = current.get('temperature_2m', 22)
+        umidade = current.get('relative_humidity_2m', 65)
+        weather_code = current.get('weather_code', 0)
+        descricao = self.weather_code_to_description(weather_code)
+        
+        # Temperatura máxima e mínima do dia
+        max_temp = daily.get('temperature_2m_max', [22])[0]
+        min_temp = daily.get('temperature_2m_min', [18])[0]
         
         # Temperatura interna do metrô
         temp_metro = LINHAS_POR_REGIAO.get(linha_id, {}).get('temp_media_metro', 21)
         diferenca = abs(temp_atual - temp_metro)
         
+        # Recomendação baseada na temperatura
         if temp_atual <= 15:
-            msg = f"🥶 **CASACÃO PESADO!** Tá frio: {temp_atual}°C"
+            msg = f"🥶 **CASACÃO PESADO!** Tá frio: {temp_atual}°C (mín {min_temp}°)"
             emoji = "🧥❄️"
         elif temp_atual <= 18:
-            msg = f"🧥 **Leva blusa de frio** ({temp_atual}°C)"
+            msg = f"🧥 **Leva blusa de frio** ({temp_atual}°C - {descricao})"
             emoji = "🧥"
         elif temp_atual <= 22:
             msg = f"👕 **Blusa leve** ({temp_atual}°C - {descricao})"
@@ -413,7 +444,7 @@ class HGWeatherAPI:
             msg = f"😎 **Roupa leve** ({temp_atual}°C)"
             emoji = "🩳"
         else:
-            msg = f"🔥 **Calorão!** {temp_atual}°C - roupa bem fresca"
+            msg = f"🔥 **Calorão!** {temp_atual}°C - roupa bem fresca (máx {max_temp}°)"
             emoji = "🩴"
         
         if diferenca > 5:
@@ -432,7 +463,7 @@ class HGWeatherAPI:
         return msg, emoji
     
     def gerar_recomendacao_por_linha(self, linha_id):
-        """Gera recomendação completa usando HG Weather API"""
+        """Gera recomendação completa usando Open-Meteo API"""
         if linha_id not in LINHAS_POR_REGIAO:
             return None
         
@@ -441,23 +472,24 @@ class HGWeatherAPI:
         
         dados = self.get_previsao(linha_id)
         
-        if dados and 'results' in dados:
-            results = dados['results']
-            cidade = results.get('city', 'São Paulo')
-            temp = results.get('temp', '?')
-            desc = results.get('description', '')
-            umidade = results.get('humidity', '?')
-            vento = results.get('wind_speedy', '?')
+        if dados:
+            current = dados.get('current', {})
+            daily = dados.get('daily', {})
             
-            # Pega previsão de hoje
-            forecast = results.get('forecast', [])
-            hoje = forecast[0] if forecast else {}
-            max_temp = hoje.get('max', '?')
-            min_temp = hoje.get('min', '?')
+            temp_atual = current.get('temperature_2m', '?')
+            umidade = current.get('relative_humidity_2m', '?')
+            vento = current.get('wind_speed_10m', '?')
+            weather_code = current.get('weather_code', 0)
+            descricao = self.weather_code_to_description(weather_code)
+            
+            max_temp = daily.get('temperature_2m_max', ['?'])[0]
+            min_temp = daily.get('temperature_2m_min', ['?'])[0]
+            
+            cidade = f"Linha {linha_id} - {LINHAS_POR_REGIAO[linha_id]['bairros'][0]}"
         else:
             cidade = "São Paulo"
-            temp = "?"
-            desc = ""
+            temp_atual = "?"
+            descricao = ""
             umidade = "?"
             vento = "?"
             max_temp = "?"
@@ -467,9 +499,9 @@ class HGWeatherAPI:
 🚇 *Recomendação para {LINHAS_POR_REGIAO[linha_id]['nome']}*
 
 📍 *Região:* {cidade}
-🌡️ *Agora:* {temp}°C - {desc}
+🌡️ *Agora:* {temp_atual}°C - {descricao}
 📊 *Máx/Mín:* {max_temp}° / {min_temp}°
-💧 *Umidade:* {umidade}% | 🌬️ *Vento:* {vento}
+💧 *Umidade:* {umidade}% | 🌬️ *Vento:* {vento} km/h
 
 🌤️ *Recomendações:*
 {msg_chuva}
@@ -478,7 +510,7 @@ class HGWeatherAPI:
 ---
 💡 *Linha:* {LINHAS_POR_REGIAO[linha_id]['nome']}
 🕐 *Atualizado:* {get_sp_time()}
-⚡ Dados via HG Weather (gratuito)
+⚡ Dados via Open-Meteo (gratuito, sem token)
 """
         return mensagem
     
@@ -489,38 +521,41 @@ class HGWeatherAPI:
         
         dados = self.get_previsao(linha_id)
         
-        if not dados or 'results' not in dados:
+        if not dados:
             return "❌ Não foi possível buscar previsão"
         
-        results = dados['results']
-        cidade = results.get('city', 'São Paulo')
-        forecast = results.get('forecast', [])
-        
-        if not forecast:
-            return "❌ Previsão não disponível"
+        daily = dados.get('daily', {})
+        cidade = f"Linha {linha_id}"
         
         msg = f"📅 *Previsão 5 dias - {cidade}*\n\n"
         
-        for i, dia in enumerate(forecast[:5]):
-            data = dia.get('date', '')
-            if data:
-                # Formata data de YYYY-MM-DD para DD/MM
-                partes = data.split('-')
-                if len(partes) == 3:
-                    data_formatada = f"{partes[2]}/{partes[1]}"
+        # Lista de dias da semana em português
+        dias_semana = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
+        
+        for i in range(5):
+            try:
+                data = daily.get('time', [''])[i]
+                if data:
+                    # Converte data para formato brasileiro
+                    data_obj = datetime.strptime(data, "%Y-%m-%d")
+                    data_formatada = data_obj.strftime("%d/%m")
+                    dia_semana = dias_semana[data_obj.weekday()]
                 else:
-                    data_formatada = data
-            
-            semana = dia.get('weekday', '')
-            max_temp = dia.get('max', '?')
-            min_temp = dia.get('min', '?')
-            chuva = dia.get('rain', 0)
-            prob = dia.get('rain_probability', 0)
-            desc = dia.get('description', '')
-            
-            msg += f"*{data_formatada} ({semana})*\n"
-            msg += f"🌡️ {min_temp}° ~ {max_temp}° | 🌧️ {chuva}mm ({prob}%)\n"
-            msg += f"📝 {desc}\n\n"
+                    data_formatada = f"Dia {i+1}"
+                    dia_semana = ""
+                
+                max_temp = daily.get('temperature_2m_max', [0])[i]
+                min_temp = daily.get('temperature_2m_min', [0])[i]
+                chuva = daily.get('precipitation_sum', [0])[i]
+                prob = daily.get('precipitation_probability_max', [0])[i]
+                weather_code = daily.get('weather_code', [0])[i]
+                desc = self.weather_code_to_description(weather_code)
+                
+                msg += f"*{data_formatada} ({dia_semana})*\n"
+                msg += f"🌡️ {min_temp}° ~ {max_temp}° | 🌧️ {chuva}mm ({prob}%)\n"
+                msg += f"📝 {desc}\n\n"
+            except:
+                pass
         
         return msg
 
@@ -568,21 +603,18 @@ def enviar_alerta_linhas():
     mensagem += "🌤️ *Clima Personalizado por Linha:*\n\n"
     
     # Clima para cada linha
-    clima = HGWeatherAPI()
+    clima = OpenMeteoAPI()
     for linha_id in linhas_alertar:
-        if HG_WEATHER_TOKEN:
-            rec = clima.gerar_recomendacao_por_linha(linha_id)
-            if rec:
-                # Extrai só a parte das recomendações
-                partes = rec.split("---")
-                linhas_rec = partes[0].split("\n")
-                # Pega só as linhas relevantes
-                for line in linhas_rec:
-                    if "🌧️" in line or "🌦️" in line or "☀️" in line or \
-                       "🥶" in line or "🧥" in line or "👕" in line or "😎" in line or "🔥" in line:
-                        mensagem += f"*Linha {linha_id}:* {line.strip()}\n"
-        else:
-            mensagem += f"*Linha {linha_id}:* ⚠️ Token do clima não configurado\n"
+        rec = clima.gerar_recomendacao_por_linha(linha_id)
+        if rec:
+            # Extrai só a parte das recomendações
+            partes = rec.split("---")
+            linhas_rec = partes[0].split("\n")
+            # Pega só as linhas relevantes
+            for line in linhas_rec:
+                if "🌧️" in line or "🌦️" in line or "☀️" in line or \
+                   "🥶" in line or "🧥" in line or "👕" in line or "😎" in line or "🔥" in line:
+                    mensagem += f"*Linha {linha_id}:* {line.strip()}\n"
     
     mensagem += "\n---\n"
     mensagem += "📊 Para ver todas as linhas, use /todas\n"
@@ -706,13 +738,9 @@ Segunda a sexta 7h e 17h: Status linhas 2,4,15 + clima personalizado
                 linha_id = partes[1].strip()
                 
                 if linha_id in LINHAS_POR_REGIAO:
-                    if not HG_WEATHER_TOKEN:
-                        send_telegram_message(chat_id, "❌ *Token da HG Weather não configurado!*\n\nEntre em contato com o administrador.")
-                        return
-                    
                     send_telegram_message(chat_id, "🔍 Consultando clima em tempo real...")
                     
-                    clima = HGWeatherAPI()
+                    clima = OpenMeteoAPI()
                     mensagem = clima.gerar_recomendacao_por_linha(linha_id)
                     if mensagem:
                         send_telegram_message(chat_id, mensagem)
@@ -741,13 +769,9 @@ Exemplos:
             linha_id = partes[1].strip() if len(partes) > 1 else "2"
             
             if linha_id in LINHAS_POR_REGIAO:
-                if not HG_WEATHER_TOKEN:
-                    send_telegram_message(chat_id, "❌ *Token da HG Weather não configurado!*")
-                    return
-                
                 send_telegram_message(chat_id, "🔍 Buscando previsão...")
                 
-                clima = HGWeatherAPI()
+                clima = OpenMeteoAPI()
                 msg = clima.gerar_previsao_5dias(linha_id)
                 
                 if msg:
